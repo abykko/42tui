@@ -1,6 +1,7 @@
+import os
 from app import create_app
 
 app = create_app(
-    secret="foo",
-    api_security=True
+    secret=os.getenv("API_SECRET", "foo"),
+    api_security=os.getenv("API_SECURITY", "true").lower() == "true"
 )

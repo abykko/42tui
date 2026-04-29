@@ -1,10 +1,9 @@
-// main.go
-
 package main
 
 import (
 	"fmt"
 	"strconv"
+
 	"42cli/conf"
 	"42cli/server"
 	"42cli/deployment"
@@ -12,8 +11,12 @@ import (
 
 func main() {
 
+	// Generate secret key
+	secret := server.GenerateSecret()
+	fmt.Println(secret)
+
 	// Load .conf file settings
-	cfg := conf.LoadConfig()
+	cfg := conf.LoadConfig(true)
 
 	port, err := strconv.Atoi(cfg["server_port"])
 	if err != nil {
@@ -21,28 +24,32 @@ func main() {
 		return
 	}
 
-	// Generate secret key
-	secret := server.GenerateSecret()
-	// secret = "foo"
+	imageName := cfg["podman_image_name"]
+	serverDir := cfg["server_dir"]
 
-	fmt.Println(port)
-	fmt.Println(secret)
+	// Build podman server image
+	deployment.BuildServerPodman(imageName, serverDir)
 
-	deployment.BuildServerDocker(port)
-
-	// Simple request to server
-	resp, status, err := server.DoSignedRequest(
-		"http://127.0.0.1:6742/status",
-		secret,
-	)
+	// Run podman server
+	podmanId, err := deployment.RunServerPodman(imageName, secret, port)
 	if err != nil {
-		fmt.Println("Request error:", err)
+		fmt.Println("Error running podman server.")
 		return
 	}
 
-	fmt.Println("Status:", status)
-	fmt.Println("Response:", resp)
+	fmt.Println("Container ID:", podmanId)
 
-	fmt.Println("Press enter to finish...")
+	fmt.Println("Press ENTER to stop server...")
+
+	// Espera Enter
 	fmt.Scanln()
+
+	// STOP container
+	err = deployment.StopServerPodman(podmanId)
+	if err != nil {
+		fmt.Println("Error stopping container:", err)
+		return
+	}
+
+	fmt.Println("Server stopped cleanly")
 }

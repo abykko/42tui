@@ -6,26 +6,23 @@ import (
 	"os/exec"
 )
 
-func BuildServerDocker(port int) error {
+func BuildServerPodman(imageName string, serverDir string) error {
 
-	fmt.Println("Building docker server with port", port)
-
-	runCommand := "gunicorn app.main:app --workers=1"
+	fmt.Println("Building podman image", imageName)
 
 	cmd := exec.Command(
-		"docker", "build",
-		"-t", "api-app",
-		"--build-arg", fmt.Sprintf("SERVER_PORT=%d", port),
-		"--build-arg", fmt.Sprintf("RUN_COMMAND=%s", runCommand),
+		"podman", "build",
+		"-t", imageName,
 		".",
 	)
 
-	// Ver output en tiempo real
+	cmd.Dir = serverDir
+
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("error building docker image: %w", err)
+		return fmt.Errorf("error building podman image: %w", err)
 	}
 
 	return nil

@@ -2,21 +2,21 @@ FROM python:3.14-slim
 
 WORKDIR /app
 
+# Instalar uv
 RUN pip install uv
 
+# Copiar dependencias primero (cache optimizado)
 COPY pyproject.toml uv.lock ./
+
+# Instalar dependencias con uv
 RUN uv sync --frozen
 
+# Copiar el resto del código
 COPY . .
 
-# Build-time args
-ARG SERVER_PORT=6742
-ARG RUN_COMMAND="gunicorn app.main:app --workers 1"
+# Variables de entorno
+ENV SERVER_PORT=6742
+ENV API_SECURITY=true
+ENV SERVER_PORT=6742
 
-# Convert them to runtime env vars
-ENV SERVER_PORT=${SERVER_PORT}
-ENV RUN_COMMAND=${RUN_COMMAND}
-
-EXPOSE ${SERVER_PORT}
-
-CMD sh -c "uv run $RUN_COMMAND -b 0.0.0.0:$SERVER_PORT"
+CMD ["sh", "-c", "uv run gunicorn wsgi:app --workers 1 --bind 0.0.0.0:$SERVER_PORT"]

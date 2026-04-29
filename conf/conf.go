@@ -41,11 +41,20 @@ func readConfig(path string) (map[string]string, error) {
 	return config, scanner.Err()
 }
 
-func LoadConfig() (map[string]string){
+func LoadConfig(debug bool) map[string]string {
 	cfg, err := readConfig("conf/.conf")
 	if err != nil {
 		fmt.Println("Error loading config:", err)
 		return nil
 	}
+
+	if debug {
+		fmt.Println("== LOADED SETTINGS ==")
+		for k, v := range cfg {
+			fmt.Printf("%s = %s\n", k, v)
+		}
+		fmt.Printf("== END SETTINGS ==\n")
+	}
+
 	return cfg
 }
