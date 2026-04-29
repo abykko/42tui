@@ -1,4 +1,5 @@
-from utils.browser import run_playwright
+from app.utils.browser import run_playwright
+from app.config import SLOTS_URL
 
 def create_slot(begin_at, end_at):
 
@@ -15,7 +16,7 @@ def create_slot(begin_at, end_at):
         page = context.new_page()
 
         page.goto(
-            "https://profile.intra.42.fr/slots",
+            SLOTS_URL,
             wait_until="commit",
             timeout=10_000
         )
@@ -25,11 +26,11 @@ def create_slot(begin_at, end_at):
             return
 
         response = context.request.post(
-            "https://profile.intra.42.fr/slots.json",
+            f"{SLOTS_URL}.json",
             headers={
                 "X-CSRF-Token": csrf_token,
                 "X-Requested-With": "XMLHttpRequest",
-                "Referer": "https://profile.intra.42.fr/slots",
+                "Referer": SLOTS_URL,
             },
             form=data,
         )
