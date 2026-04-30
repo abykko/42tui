@@ -9,8 +9,6 @@ import (
 
 func RunServerPodman(imageName string, secret string, port int, env string) (string, error) {
 
-	fmt.Println("Running podman image:", imageName)
-
 	cmd := exec.Command(
 		"podman", "run",
 		"-d",
@@ -19,6 +17,9 @@ func RunServerPodman(imageName string, secret string, port int, env string) (str
 		"-e", fmt.Sprintf("SECRET=%s", secret),
 		fmt.Sprintf("%s:latest", imageName),
 	)
+
+	cmd.Stdout = nil
+	cmd.Stderr = nil
 
 	output, err := cmd.Output()
 	if err != nil {
@@ -32,8 +33,6 @@ func RunServerPodman(imageName string, secret string, port int, env string) (str
 	if err != nil {
 		return "", fmt.Errorf("error setting env var: %w", err)
 	}
-
-	fmt.Println("Container started with ID:", containerID)
 
 	return containerID, nil
 }

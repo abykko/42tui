@@ -7,8 +7,6 @@ import (
 
 func StopServerPodman(container string) error {
 
-	fmt.Println("Stopping podman container:", container)
-
 	cmd := exec.Command(
 		"podman", "kill", container,
 	)
@@ -17,8 +15,6 @@ func StopServerPodman(container string) error {
 	if err != nil {
 		return fmt.Errorf("error stopping container: %w - %s", err, string(output))
 	}
-
-	fmt.Println("Container stopped:", string(output))
 
 	return nil
 }
