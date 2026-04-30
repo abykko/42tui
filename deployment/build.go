@@ -2,13 +2,10 @@ package deployment
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
 )
 
 func BuildServerPodman(imageName string, serverDir string) error {
-
-	fmt.Println("Building podman image", imageName)
 
 	cmd := exec.Command(
 		"podman", "build",
@@ -17,9 +14,8 @@ func BuildServerPodman(imageName string, serverDir string) error {
 	)
 
 	cmd.Dir = serverDir
-
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = nil
+	cmd.Stderr = nil
 
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("error building podman image: %w", err)

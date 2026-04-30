@@ -17,6 +17,5 @@ COPY . .
 # Variables de entorno
 ENV SERVER_PORT=6742
 ENV API_SECURITY=true
-ENV SERVER_PORT=6742
 
 CMD ["sh", "-c", "uv run gunicorn wsgi:app --workers 1 --bind 0.0.0.0:$SERVER_PORT"]
