@@ -1,4 +1,4 @@
-package server
+package deployment
 
 import (
 	"crypto/rand"
