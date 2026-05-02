@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"fmt"
+	"strconv"
 	"42cli/conf"
 	// "42cli/server"
 	"42cli/deployment"
@@ -13,7 +14,6 @@ import (
 
 type s_loading struct {
 	header		string
-	subheader	string
 	status		string
 }
 
@@ -25,15 +25,15 @@ type s_status struct {
 
 type model struct{
 	loading 		s_loading
-	activeWindow	string
 	status			s_status
+	selected		int
 }
 
 func initialModel() model {
 	return model{
-		loading: s_loading{header: "42cli",subheader: "by iamrani-",status: "Press Enter to start...",},
+		loading: s_loading{header: "42cli",status: "Press Enter to start...",},
 		status: s_status{container: false, api: false, session: false,},
-		activeWindow: "loadingScreen",
+		selected: 1,
 	}
 }
 
@@ -49,6 +49,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "ctrl+c":
 			return m, tea.Quit
+
+		case "1", "2", "3":
+			m.selected, _ = strconv.Atoi(msg.String())
+			return m, nil
 
 		case "q":
 			m.status.container = false
@@ -68,7 +72,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func LoadingScreen(m model) string {
+func Temp(m model) string {
 	physicalWidth, _, _ := term.GetSize(int(os.Stdout.Fd()))
 
 	headerStyle := lipgloss.NewStyle().
@@ -78,22 +82,53 @@ func LoadingScreen(m model) string {
 		Width(physicalWidth)
 	header := headerStyle.Render(m.loading.header)
 
-	subheader := headerStyle.Render(m.loading.subheader)
-
 	status := headerStyle.Render(m.loading.status)
 
 	content := lipgloss.JoinVertical(
 		lipgloss.Center,
 		header,
-		subheader,
 		status,
 	)
 
-	return content
+	borderStyle := lipgloss.NewStyle().
+		Border(lipgloss.NormalBorder())
+	
+	return borderStyle.Render(content)
+}
+
+func ServerStatusView(m model) string {
+	physicalWidth, _, _ := term.GetSize(int(os.Stdout.Fd()))
+
+	textStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("12")).
+		Align(lipgloss.Center).
+		Width(physicalWidth)
+	
+	containerLabel := textStyle.Render("container")
+	apiLabel := textStyle.Render("api")
+	sessionLabel := textStyle.Render("session")
+
+	content := lipgloss.JoinVertical(lipgloss.Center,
+		containerLabel,
+		apiLabel,
+		sessionLabel,
+	)
+
+	borderStyle := lipgloss.NewStyle().
+		Border(lipgloss.NormalBorder())
+	
+	return borderStyle.Render(content)
 }
 
 func (m model) View() tea.View {
-	v := tea.NewView(LoadingScreen(m))
+
+	content := lipgloss.JoinVertical(lipgloss.Center,
+		Temp(m),
+		ServerStatusView(m),
+	)
+
+	v := tea.NewView(content)
 	v.AltScreen = true
 	return v
 }
