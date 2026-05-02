@@ -1,13 +1,14 @@
 package main
 
 import (
-	"fmt"
 	"os"
+	"fmt"
 	"42cli/conf"
+	// "42cli/server"
 	"42cli/deployment"
-	tea "charm.land/bubbletea/v2"
-	"charm.land/lipgloss/v2"
 	"golang.org/x/term"
+	"charm.land/lipgloss/v2"
+	tea "charm.land/bubbletea/v2"
 )
 
 type s_loading struct {
@@ -16,20 +17,22 @@ type s_loading struct {
 	status		string
 }
 
+type s_status struct {
+	container	bool
+	api			bool
+	session		bool
+}
+
 type model struct{
 	loading 		s_loading
 	activeWindow	string
-	serverRunning	bool
+	status			s_status
 }
 
 func initialModel() model {
 	return model{
-		loading: s_loading{
-			header: "42cli",
-			subheader: "by iamrani-",
-			status: "Press Enter to start...",
-		},
-		serverRunning: false,
+		loading: s_loading{header: "42cli",subheader: "by iamrani-",status: "Press Enter to start...",},
+		status: s_status{container: false, api: false, session: false,},
 		activeWindow: "loadingScreen",
 	}
 }
@@ -44,23 +47,24 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyPressMsg:
 		switch msg.String() {
 
-		case "q", "ctrl+c", "esc":
-			if m.serverRunning == true {
-				m.loading.status = "Stopping server"
-			}
+		case "ctrl+c":
 			return m, tea.Quit
 
+		case "q":
+			m.status.container = false
+			m.loading.status = "Server stopped."
+			deployment.Stop()
+			return m, nil
+
 		case "enter":
-			if m.serverRunning == false {
-				_, err := deployment.DeployServer()
-				if err != nil {
-					fmt.Println("Error:", err)
-				}
-				m.serverRunning = true
-				m.loading.status = "Server running"
-			}
+			m.status.container = true
+			m.loading.status = "Server running"
+			deployment.Build()
+			deployment.Run()
+			return m, nil
 		}
 	}
+
 	return m, nil
 }
 
@@ -89,35 +93,28 @@ func LoadingScreen(m model) string {
 }
 
 func (m model) View() tea.View {
-
-	if m.activeWindow == "loadingScreen" {
-		v := tea.NewView(LoadingScreen(m))
-		return v
-	}
-	
-	v := tea.NewView("")
+	v := tea.NewView(LoadingScreen(m))
 	v.AltScreen = true
 	return v
 }
 
 func main() {
 
-	cfg, err := conf.LoadConfig("conf/.conf", false)
+	envVarName, err := conf.GetString("container_id_env_var_name")
 	if err != nil {
-		fmt.Println("error reading settings file:", err)
+		fmt.Println("error obtaining the name of the env variable with the container id")
 		os.Exit(1)
 	}
-
-	envVarName := cfg["container_id_env_var_name"]
 
 	defer func() {
 		containerID := os.Getenv(envVarName)
 		if containerID != "" {
-			fmt.Println("Stopping container from env:", containerID)
-			if err := deployment.StopServerPodman(containerID); err != nil {
+			fmt.Println("Stopping container from main() defer function. Container:", containerID)
+			if err := deployment.Stop(); err != nil {
 				fmt.Println("Error stopping container:", err)
 			}
 		}
+		os.Exit(1)
 	}()
 
 	if _, err := tea.NewProgram(initialModel()).Run(); err != nil {
