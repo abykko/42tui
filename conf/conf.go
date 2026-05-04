@@ -132,7 +132,7 @@ func GetBool(key string) (bool, error) {
 		return false, err
 	}
 
-	// Support different binary selection indicator
+	// Supports different ways of bool indications
 	switch strings.ToLower(value) {
 	case "true", "1", "yes", "y", "on":
 		return true, nil
