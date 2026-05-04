@@ -11,7 +11,12 @@ import (
 
 func Run() (string, error) {
 	// Load config
-	port, err := conf.GetString("server_port")
+	addr, err := conf.GetString("server_addr")
+	if err != nil {
+		return "", fmt.Errorf("getting server_addr: %w", err)
+	}
+
+	port, err := conf.GetInt("server_port")
 	if err != nil {
 		return "", fmt.Errorf("getting server_port: %w", err)
 	}
@@ -36,12 +41,14 @@ func Run() (string, error) {
 		return "", fmt.Errorf("environment variable %q is empty", secretEnv)
 	}
 
+	fmt.Println(secret)
+
 	// Build command
 	cmd := exec.Command(
 		"podman", "run",
 		"-d",
-		"-p", fmt.Sprintf("127.0.0.1:%s:%s", port, port),
-		"-e", fmt.Sprintf("SERVER_PORT=%s", port),
+		"-p", fmt.Sprintf("%s:%d:%d", addr, port, port),
+		"-e", fmt.Sprintf("SERVER_PORT=%d", port),
 		"-e", fmt.Sprintf("SECRET=%s", secret),
 		fmt.Sprintf("%s:latest", imageName),
 	)

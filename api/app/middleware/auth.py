@@ -21,7 +21,6 @@ def validate_sign(secret, timestamp, sign):
 
     return hmac.compare_digest(sign, legit_sign)
 
-
 def register_security(app, api_security, secret):
 
     @app.before_request
@@ -29,8 +28,8 @@ def register_security(app, api_security, secret):
         if not api_security:
             return
 
-        timestamp = request.headers.get("X-Timestamp")
-        sign = request.headers.get("X-Signature")
+        timestamp = request.headers.get("X-Timestamp", "").strip()
+        sign = request.headers.get("X-Signature", "").strip()
 
         if not timestamp or not sign:
             return jsonify({"error": "Unauthorized"}), 401
