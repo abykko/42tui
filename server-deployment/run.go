@@ -41,8 +41,6 @@ func Run() (string, error) {
 		return "", fmt.Errorf("environment variable %q is empty", secretEnv)
 	}
 
-	fmt.Println(secret)
-
 	// Build command
 	cmd := exec.Command(
 		"podman", "run",
