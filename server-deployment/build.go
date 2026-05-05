@@ -46,6 +46,9 @@ func Build() error {
 		return fmt.Errorf("error getting podman_image_name: %w", err)
 	}
 
+	// Remove the containers if already exists for any reason
+	StopByImage()
+
 	cmd := exec.Command("podman", "build", "-t", imageName, ".")
 	cmd.Dir = servDir
 

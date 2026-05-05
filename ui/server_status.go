@@ -1,52 +1,49 @@
 package ui
 
 import (
-	"os"
-	"golang.org/x/term"
 	"charm.land/lipgloss/v2"
 )
 
-func ServerStatusView(m Model, tab int) string {
+func ServerStatusView(m Model) string {
 
-	color := "0"
-	if m.Selected == tab {
-		color = "45"
+	// estilo base de cada card (CLAVE: Width fijo)
+	card := lipgloss.NewStyle().
+		Background(lipgloss.Color("#4b6a79")).
+		Padding(0, 1).
+		MarginRight(1).
+		Width(18)
+
+	// estilos de texto
+	okStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#33ff00"))
+
+	offStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#ffffff"))
+
+	status := func(name string, active bool) string {
+		if active {
+			return name + " +"
+		}
+		return name + " -"
 	}
 
-	w, _, _ := term.GetSize(int(os.Stdout.Fd()))
-
-	style := lipgloss.NewStyle().
-		Bold(true).
-		Foreground(lipgloss.Color("12")).
-		Align(lipgloss.Center).
-		Width(w)
-
-	container := "Container -"
-	if m.Status.Container {
-		container = "Container +"
+	renderStatus := func(name string, active bool) string {
+		if active {
+			return okStyle.Render(status(name, true))
+		}
+		return offStyle.Render(status(name, false))
 	}
 
-	api := "Api -"
-	if m.Status.Api {
-		api = "Api +"
-	}
+	container := card.Render(renderStatus("Container", m.Status.Container))
+	api := card.Render(renderStatus("Api", m.Status.Api))
+	session := card.Render(renderStatus("Session", m.Status.Session))
 
-	session := "Session -"
-	if m.Status.Session {
-		session = "Session +"
-	}
-
-	content := lipgloss.JoinVertical(
-		lipgloss.Center,
-		style.Render(container),
-		style.Render(api),
-		style.Render(session),
+	line := lipgloss.JoinHorizontal(
+		lipgloss.Left,
+		container,
+		api,
+		session,
 	)
 
-	border := lipgloss.NewStyle().
-		Border(lipgloss.NormalBorder()).
-		BorderForeground(lipgloss.Color(color)).
-		Width(22)
-
-	return border.Render(content)
+	return line
 }

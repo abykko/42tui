@@ -29,7 +29,7 @@ def profile(username):
         page.goto(f"{PROFILE_URL}/users/{username}")
 
         while len(resp_objs) < 8:
-            page.wait_for_timeout(10)
+            page.wait_for_timeout(100)
 
         return json_bundler(resp_objs)
 

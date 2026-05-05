@@ -10,18 +10,31 @@ def log_out() -> bool:
             return False
     return True
 
-
-def log_in() -> bool:
+def log_in(username, password) -> bool:
     def task(page, context):
         try:
-            if not SESSION_FILE: return False
-
             page.goto(PROFILE_URL)
-            page.wait_for_url(AUTH_URL, timeout=0)
-            page.wait_for_url(PROFILE_URL, timeout=0)
-            context.storage_state(path=SESSION_FILE)
-        except Exception:
-            return (False)
-        return (True)
 
-    return (run_playwright(task, headless=False, auth=False))
+            page.wait_for_url(AUTH_URL)
+
+            page.wait_for_selector('#username', timeout=10000)
+
+            page.wait_for_selector('#password', timeout=10000)
+
+            page.fill('#username', username)
+            page.fill('#password', password)
+
+            page.wait_for_selector('#kc-login', timeout=10000)
+
+            page.click('#kc-login')
+
+            page.wait_for_url(PROFILE_URL, timeout=10000)
+
+            context.storage_state(path=SESSION_FILE)
+
+            return True
+            
+        except Exception as e:
+            return False
+
+    return run_playwright(task, headless=True, auth=False)

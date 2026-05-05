@@ -1,52 +1,79 @@
 package ui
 
-import (
-    "strconv"
-	"42cli/api"
-    "42cli/server-deployment"
-    tea "charm.land/bubbletea/v2"
-)
+import tea "charm.land/bubbletea/v2"
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-    switch msg := msg.(type) {
-    case tea.KeyPressMsg:
-        switch msg.String() {
-        case "ctrl+c":
-            return m, tea.Quit
 
-        case "1", "2", "3":
-            m.Selected, _ = strconv.Atoi(msg.String())
-            return m, nil
+	// startup routing
+	if m.Page == "startup" && m.Status.Container && m.Status.Api {
 
-        case "q":
-            if m.Selected == 2 {
-                deployment.Stop()
-                m.Status.Container = false
-            }
-            return m, nil
+		if !m.Status.Session {
+			m.Page = "login"
+			return m, nil
+		}
 
-        case "enter":
-            return handleEnter(m)
-        }
-    }
-    return m, nil
+		m.Page = "profile"
+		return m, nil
+	}
+
+	// startup flow
+	if m.Page == "startup" {
+		return StartupService(m)
+	}
+
+	switch msg := msg.(type) {
+
+	case tea.KeyPressMsg:
+
+		// global quit
+		if msg.String() == "ctrl+c" {
+			return m, tea.Quit
+		}
+
+		// login page input handling
+		if m.Page == "login" {
+
+			switch msg.String() {
+
+            case "ctrl+c":
+                return m, tea.Quit
+
+			case "tab":
+				m.Login.FocusIndex = (m.Login.FocusIndex + 1) % 2
+				m = updateLoginFocus(m)
+
+			case "shift+tab":
+				m.Login.FocusIndex--
+				if m.Login.FocusIndex < 0 {
+					m.Login.FocusIndex = 1
+				}
+				m = updateLoginFocus(m)
+			}
+
+			var cmd tea.Cmd
+
+			m.Login.UsernameInput, cmd = m.Login.UsernameInput.Update(msg)
+			m.Login.PasswordInput, _ = m.Login.PasswordInput.Update(msg)
+
+			return m, cmd
+		}
+	}
+
+	return m, nil
 }
 
-func handleEnter(m Model) (Model, tea.Cmd) {
-    if m.Selected == 2 {
-        if err := deployment.Build(); err != nil { return m, nil }
-        if _, err := deployment.Run(); err != nil { return m, nil }
-        
-        m.Status.Container = true
-        m.Status.Api = true
-        m.Status.Session = true
-    }
+func updateLoginFocus(m Model) Model {
 
-    if m.Selected == 3 {
-        resp, _, err := api.DoSignedRequest("/status")
-        if err == nil {
-            m.Profile.Name = resp["status"].(string)
-        }
-    }
-    return m, nil
+	switch m.Login.FocusIndex {
+
+	case 0:
+		m.Login.UsernameInput.Focus()
+		m.Login.PasswordInput.Blur()
+
+	case 1:
+		m.Login.UsernameInput.Blur()
+		m.Login.PasswordInput.Focus()
+	}
+
+	return m
 }
