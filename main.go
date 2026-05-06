@@ -3,7 +3,7 @@ package main
 import (
     "fmt"
     "os"
-    // "42cli/conf"
+    "42cli/conf"
     "42cli/server-deployment"
     "42cli/ui"
     tea "charm.land/bubbletea/v2"
@@ -14,6 +14,7 @@ func main() {
     defer func() {
 		deployment.Stop()
         deployment.StopByImage()
+        conf.Set("logged_with", "")
     }()
 
     p := tea.NewProgram(ui.InitialModel())

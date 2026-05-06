@@ -1,60 +1,101 @@
 package ui
 
 import (
-	"fmt"
+	"log"
 	"time"
+
+	"42cli/conf"
 	"42cli/api"
-    "42cli/server-deployment"
-    tea "charm.land/bubbletea/v2"
+	deployment "42cli/server-deployment"
+	tea "charm.land/bubbletea/v2"
 )
 
 func StartupService(m Model) (Model, tea.Cmd) {
-	// Stop button
-	if m.Status.Container == true {
-		deployment.Stop()
-		m.Status.Container = false
-		return m, nil
-	}
+
+	log.Println("[Startup] iniciado")
 
 	defer func() {
 		if m.Status.Container == false {
+			log.Println("[Startup] container no activo, haciendo stop")
 			deployment.Stop()
 		}
 	}()
 
-	// In case this guard conditions throw an error we stop the server with defer function
-	if err := deployment.Build(); err != nil {return m, nil}
-	if _, err := deployment.Run(); err != nil {return m, nil}
-	
-	m.Status.Container = true // Container is running
-	
-	// We wait for the api
+	// Build
+	log.Println("[Startup] building container...")
+	if err := deployment.Build(); err != nil {
+		log.Println("[Startup] build error:", err)
+		return m, nil
+	}
+
+	// Run
+	log.Println("[Startup] running container...")
+	if _, err := deployment.Run(); err != nil {
+		log.Println("[Startup] run error:", err)
+		return m, nil
+	}
+
+	m.Status.Container = true
+	log.Println("[Startup] container running")
+
+	// Wait API
+	log.Println("[Startup] esperando API /status...")
 	err := api.WaitForRequestTo(
 		"/status",
 		func(resp map[string]interface{}) bool {
+			log.Println("[Startup] /status response:", resp)
 			return resp["status"] == "ok"
 		},
-		10*time.Second,         // timeout
-		500*time.Millisecond,    // interval
+		10*time.Second,
+		30*time.Millisecond,
 	)
 
 	if err != nil {
-		fmt.Println(err)
+		log.Println("[Startup] API no respondió:", err)
 		return m, nil
 	}
 
 	m.Status.Api = true
+	log.Println("[Startup] API OK")
 
-	resp, _, err := api.DoRequest("/session/expired")
-	if err == nil {
-		expired := resp["expired"].(bool)
-		if expired == true {
-			m.Status.Session = false
-		} else {
-			m.Status.Session = true // Session is valid
-		}
-	} else {
+	// Autologin
+	autoLogin, err := conf.GetBool("autologin")
+	if err != nil {
+		log.Println("[Startup] error leyendo autologin:", err)
 		return m, nil
 	}
-    return m, nil
+
+	if !autoLogin {
+		log.Println("[Startup] autologin desactivado")
+		m.Page = "login"
+		return m, func() tea.Msg { return 1 }
+	}
+
+	log.Println("[Startup] autologin activado")
+
+	loginUser, err := conf.GetString("user_login")
+	if err != nil {
+		log.Println("[Startup] error leyendo user_login:", err)
+		return m, nil
+	}
+
+	loginPasswd, err := conf.GetString("passwd_login")
+	if err != nil {
+		log.Println("[Startup] error leyendo passwd_login:", err)
+		return m, nil
+	}
+
+	log.Println("[Startup] credenciales cargadas para:", loginUser)
+
+	m.Login.UsernameInput.SetValue(loginUser)
+	m.Login.PasswordInput.SetValue(loginPasswd)
+
+	log.Println("[Startup] ejecutando LoginService...")
+
+	newModel, _ := LoginService(m)
+	m = newModel.(Model)
+
+	log.Println("[Startup] login completado")
+
+	return m, func() tea.Msg { return 1 }
 }

@@ -25,6 +25,9 @@ func (m Model) View() tea.View {
     if m.Status.Session == false && m.Status.Api == true {
         rows[1] = append(rows[1], itemStyle.Render(LoginView(m)))
     }
+	if m.Status.Session == true && m.Status.Api == true {
+		rows[1] = append(rows[1], itemStyle.Render(ProfileView(m)))
+	}
 
 	var renderedRows []string
 
