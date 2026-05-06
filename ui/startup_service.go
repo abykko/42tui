@@ -85,6 +85,12 @@ func StartupService(m Model) (Model, tea.Cmd) {
 		return m, nil
 	}
 
+	if loginUser == "" || loginPasswd == "" {
+		log.Println("[Startup] error no hay credenciales guardadas:", err)
+		m.Page = "login"
+		return m, nil
+	}
+
 	log.Println("[Startup] credenciales cargadas para:", loginUser)
 
 	m.Login.UsernameInput.SetValue(loginUser)
