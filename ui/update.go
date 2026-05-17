@@ -2,15 +2,17 @@ package ui
 
 import (
 	"log"
-	"github.com/davecgh/go-spew/spew"
 	tea "charm.land/bubbletea/v2"
 )
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	
+
 	log.Println(m.Page)
-	if m.Dump != nil {
-		spew.Fdump(m.Dump, msg)
+	if s, ok := msg.(string); ok {
+		switch s {
+		case "autologin":
+			return AutologinService(m)
+		}
 	}
 
 	// Log de cada mensaje recibido para debug profundo

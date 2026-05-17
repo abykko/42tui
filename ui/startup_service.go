@@ -12,8 +12,6 @@ import (
 
 func StartupService(m Model) (Model, tea.Cmd) {
 
-	log.Println("[Startup] iniciado")
-
 	defer func() {
 		if m.Status.Container == false {
 			log.Println("[Startup] container no activo, haciendo stop")
@@ -21,14 +19,14 @@ func StartupService(m Model) (Model, tea.Cmd) {
 		}
 	}()
 
-	// Build
+	// Build container with the server
 	log.Println("[Startup] building container...")
 	if err := deployment.Build(); err != nil {
 		log.Println("[Startup] build error:", err)
 		return m, nil
 	}
 
-	// Run
+	// Run the server container once is ready
 	log.Println("[Startup] running container...")
 	if _, err := deployment.Run(); err != nil {
 		log.Println("[Startup] run error:", err)
@@ -36,9 +34,9 @@ func StartupService(m Model) (Model, tea.Cmd) {
 	}
 
 	m.Status.Container = true
-	log.Println("[Startup] container running")
+	log.Println("[Startup] container is running")
 
-	// Wait API
+	// Wait until the API is ready (has a timeout)
 	log.Println("[Startup] esperando API /status...")
 	err := api.WaitForRequestTo(
 		"/status",
@@ -49,7 +47,6 @@ func StartupService(m Model) (Model, tea.Cmd) {
 		10*time.Second,
 		30*time.Millisecond,
 	)
-
 	if err != nil {
 		log.Println("[Startup] API no respondió:", err)
 		return m, nil
@@ -58,7 +55,7 @@ func StartupService(m Model) (Model, tea.Cmd) {
 	m.Status.Api = true
 	log.Println("[Startup] API OK")
 
-	// Autologin
+	// Check if autologin is enabled
 	autoLogin, err := conf.GetBool("autologin")
 	if err != nil {
 		log.Println("[Startup] error leyendo autologin:", err)
@@ -66,42 +63,15 @@ func StartupService(m Model) (Model, tea.Cmd) {
 	}
 
 	if !autoLogin {
-		log.Println("[Startup] autologin desactivado")
+		log.Println("[Autologin] autologin desactivado")
+
+		// Open login page
 		m.Page = "login"
+
 		return m, func() tea.Msg { return 1 }
 	}
 
-	log.Println("[Startup] autologin activado")
-
-	loginUser, err := conf.GetString("user_login")
-	if err != nil {
-		log.Println("[Startup] error leyendo user_login:", err)
-		return m, nil
-	}
-
-	loginPasswd, err := conf.GetString("passwd_login")
-	if err != nil {
-		log.Println("[Startup] error leyendo passwd_login:", err)
-		return m, nil
-	}
-
-	if loginUser == "" || loginPasswd == "" {
-		log.Println("[Startup] error no hay credenciales guardadas:", err)
-		m.Page = "login"
-		return m, nil
-	}
-
-	log.Println("[Startup] credenciales cargadas para:", loginUser)
-
-	m.Login.UsernameInput.SetValue(loginUser)
-	m.Login.PasswordInput.SetValue(loginPasswd)
-
-	log.Println("[Startup] ejecutando LoginService...")
-
-	newModel, _ := LoginService(m)
-	m = newModel.(Model)
-
-	log.Println("[Startup] login completado")
-
-	return m, func() tea.Msg { return 1 }
+	// Trigger autologin
+	m.Page = "autologin"
+	return m, func() tea.Msg { return "autologin" }
 }

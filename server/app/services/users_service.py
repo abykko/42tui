@@ -11,6 +11,9 @@ def json_bundler(objs: list[tuple[str, object]]):
         if "projects" in key:
             key = "projects"
 
+        if "summary" in key:
+            key = "summary"
+
         if key in data and isinstance(data[key], dict) and isinstance(obj, dict):
             data[key].update(obj)
         else:

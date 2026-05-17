@@ -12,42 +12,14 @@ import (
 	"42cli/conf"
 )
 
-func fetchProfileCmd(m Model) ProfileData {
-	log.Println("Iniciando fetchProfileCmd...")
-
-	userLogged, err := conf.GetString("logged_with")
-	if err != nil {
-		log.Printf("Error obteniendo config 'logged_with': %v", err)
-		return m.Profile
-	}
-
-	profile, err := getUserProfile(userLogged)
-	if err != nil {
-		log.Printf("Error obteniendo perfil: %v", err)
-		return m.Profile
-	}
-
-	return profile
-}
-
-func getUserProfile(user string) (ProfileData, error) {
-	endpoint := fmt.Sprintf("/users/profile?user=%s", user)
-	log.Printf("Llamando a la API: %s", endpoint)
-
-	resp, _, err := api.DoRequest(endpoint)
-	if err != nil {
-		return ProfileData{}, err
-	}
-
-	return parseProfile(resp, user)
-}
-
 func parseProfile(resp map[string]interface{}, userLogged string) (ProfileData, error) {
+
+	// Most of the profile page data
 	key := fmt.Sprintf("https://intrapy.intra.42.fr/api/v1/users/%s", userLogged)
 
 	raw, ok := resp[key]
 	if !ok {
-		return ProfileData{}, fmt.Errorf("clave no encontrada en la respuesta")
+		return ProfileData{}, fmt.Errorf("key not found")
 	}
 
 	bytes, err := json.Marshal(raw)
@@ -71,32 +43,60 @@ func parseProfile(resp map[string]interface{}, userLogged string) (ProfileData, 
 		}
 	}
 
+	summary, ok := resp["summary"]
+	if ok {
+		if s, ok := summary.(map[string]interface{}); ok {
+			if lang, ok := s["language"].(string); ok {
+				profile.Language = lang
+			}
+		}
+	}
+
 	return profile, nil
 }
 
-func logProfile(profile ProfileData) {
-	data, err := json.MarshalIndent(profile, "", "  ")
-	if err != nil {
-		log.Printf("error serializando profile: %v", err)
-		return
+func fetchProfile(m Model, user string) ProfileData {
+
+	if user == "" {
+		// Use logged user as parrameter
+		loggedUser, err := conf.GetString("logged_with")
+		if err != nil {
+			log.Printf("Error obteniendo config 'logged_with': %v", err)
+			return m.Profile
+		}
+		user = loggedUser
 	}
 
-	log.Println(string(data))
+	// Fetch data
+	endpoint := fmt.Sprintf("/users/profile?user=%s", user)
+	log.Printf("[ProfileService] llamando a la API: %s", endpoint)
+
+	resp, _, err := api.DoRequest(endpoint)
+	if err != nil {
+		return ProfileData{}
+	}
+
+	parsedProfile, err := parseProfile(resp, user)
+	if err != nil {
+		return ProfileData{}
+	}
+	return parsedProfile
 }
 
 func ProfileService(m Model) (tea.Model, tea.Cmd) {
 
+	// Updating cooldown
 	lastUpdate := m.ProfileLastUpdate
 	elapsedTime := time.Now().Unix() - lastUpdate
 
-	if elapsedTime < 30 {
+	if elapsedTime < 8 {
 		log.Println("Tried to fetch profile. Is in cooldown!", elapsedTime, "seconds ago.")
 		return m, nil
 	}
 
-	m.Profile = fetchProfileCmd(m)
-
+	// Fetch data and update m.Profile
+	m.Profile = fetchProfile(m, "")
 	m.ProfileLastUpdate = time.Now().Unix()
-		
+	
 	return m, nil
 }

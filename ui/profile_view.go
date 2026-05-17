@@ -7,6 +7,26 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
+func languageEmoji(lang string) string {
+	flags := map[string]string{
+		"es": "🇪🇸",
+		"en": "🇬🇧",
+		"fr": "🇫🇷",
+		"de": "🇩🇪",
+		"it": "🇮🇹",
+		"pt": "🇵🇹",
+		"ru": "🇷🇺",
+		"ja": "🇯🇵",
+		"ko": "🇰🇷",
+		"zh": "🇨🇳",
+	}
+
+	if emoji, ok := flags[lang]; ok {
+		return emoji
+	}
+	return lang
+}
+
 func profile(m Model) string {
 
 	profile := lipgloss.NewStyle().
@@ -30,41 +50,40 @@ func profile(m Model) string {
 	valueStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("252"))
 
-	name := fmt.Sprintf("%s %s", m.Profile.FirstName, m.Profile.LastName)
+	firstName := m.Profile.FirstName
+	lastName := m.Profile.LastName
+	name := fmt.Sprintf("%s %s", firstName, lastName)
+
 	username := fmt.Sprintf("@%s", m.Profile.Login)
+
 	email := m.Profile.Email
+
+	evPoint := m.Profile.EvaluationPoints
+
+	wallet := m.Profile.Wallet
+
 	location := "Málaga(THIS LOCATION IS MOCKED)"
-	bio := "Building cool CLI apps with Go 🚀"
 
-	link := func(url, text string) string {
-		return "\033]8;;" + url + "\033\\" + text + "\033]8;;\033\\"
-	}
+	bio := "Vamos a hacer intra pero mejor, será buena idea ;)"
 
-	avatar := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("69")).
-		Render(
-			link(m.Profile.ProfilePicture,
-				" ◉ ◉ \n"+
-					"  ◉  \n"+
-					" ◉ ◉ ",
-			),
-		)
+	points := lipgloss.JoinVertical(lipgloss.Left,
+		fmt.Sprintf("Ev.P %d", evPoint),
+		fmt.Sprintf("₳ %d", wallet),
+		languageEmoji(m.Profile.Language),
+	)
 
-	info := lipgloss.JoinVertical(
-		lipgloss.Left,
+	info := lipgloss.JoinVertical(lipgloss.Left,
 		nameStyle.Render(name),
 		usernameStyle.Render(username),
-		"",
 		labelStyle.Render("Email: ")+valueStyle.Render(email),
 		labelStyle.Render("Location: ")+valueStyle.Render(location),
-		"",
 		valueStyle.Render(bio),
 	)
 
 	profileContent := lipgloss.JoinHorizontal(
 		lipgloss.Top,
-		avatar,
-		"   ",
+		points,
+		"    ",
 		info,
 	)
 
@@ -111,6 +130,11 @@ func ProfileView(m Model) string {
 		Width(w).
 		AlignHorizontal(lipgloss.Center).
 		Padding(2, 0)
+	
+	id := m.Profile.ID
+	if id == 0 {
+		return root.Render("Loading...")
+	}
 
 	content := lipgloss.JoinHorizontal(
 		lipgloss.Center,

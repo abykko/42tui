@@ -48,6 +48,8 @@ type ProfileData struct {
 	Titles            []any      `json:"titles"`
 
 	Projects		  []Project	 `json:"projects"`
+	
+	Language		  string
 }
 
 type LoginForm struct {

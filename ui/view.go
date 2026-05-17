@@ -8,12 +8,10 @@ import (
 func (m Model) View() tea.View {
 
 	// espacio entre elementos de una row
-	itemStyle := lipgloss.NewStyle().
-		MarginRight(2)
+	itemStyle := lipgloss.NewStyle().MarginRight(2)
 
 	// espacio entre rows
-	rowStyle := lipgloss.NewStyle().
-		MarginBottom(1)
+	rowStyle := lipgloss.NewStyle().MarginBottom(1)
 
 	rows := [][]string{
 		{
@@ -22,10 +20,13 @@ func (m Model) View() tea.View {
         {},
 	}
 
-    if m.Status.Session == false && m.Status.Api == true {
+	if m.Page == "autologin" {
+		rows[1] = append(rows[1], itemStyle.Render("Autologin..."))
+	}
+    if m.Page == "login" {
         rows[1] = append(rows[1], itemStyle.Render(LoginView(m)))
     }
-	if m.Status.Session == true && m.Status.Api == true {
+	if m.Page  == "profile" {
 		rows[1] = append(rows[1], itemStyle.Render(ProfileView(m)))
 	}
 
