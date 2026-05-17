@@ -11,9 +11,11 @@ func profile(m Model) string {
 
 	profile := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
+		BorderLeft(false).
+		BorderRight(false).
 		BorderForeground(lipgloss.Color("63")).
-		Padding(2, 4).
-		Width(50)
+		Padding(1, 2).
+		Width(60)
 
 	nameStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("205")).
@@ -31,15 +33,21 @@ func profile(m Model) string {
 	name := fmt.Sprintf("%s %s", m.Profile.FirstName, m.Profile.LastName)
 	username := fmt.Sprintf("@%s", m.Profile.Login)
 	email := m.Profile.Email
-	location := "Málaga(MOCKDATA)"
+	location := "Málaga(THIS LOCATION IS MOCKED)"
 	bio := "Building cool CLI apps with Go 🚀"
+
+	link := func(url, text string) string {
+		return "\033]8;;" + url + "\033\\" + text + "\033]8;;\033\\"
+	}
 
 	avatar := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("69")).
 		Render(
-			" ◉ ◉ \n" +
-				"  ◉  \n" +
-				" ◉ ◉ ",
+			link(m.Profile.ProfilePicture,
+				" ◉ ◉ \n"+
+					"  ◉  \n"+
+					" ◉ ◉ ",
+			),
 		)
 
 	info := lipgloss.JoinVertical(
@@ -69,20 +77,30 @@ func projects(m Model) string {
 
 	for _, p := range m.Profile.Projects {
 
-		pStatus := "~"
-
+		pStatus := "✘"
+		color := "#d32020"
 		if p.IsValidated {
+			color = "#59ff00"
 			pStatus = "✓"
 		}
 
-		line := fmt.Sprintf("• %s (%d) %s", p.ProjectName, p.FinalMark, pStatus)
+		lineStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color(color))
+		
+		line := fmt.Sprintf("%s (%d) %s", p.ProjectName, p.FinalMark, pStatus)
 
-		projects += lipgloss.NewStyle().
-			Foreground(lipgloss.Color("33")).
-			Render(line) + "\n"
+		projects += lineStyle.Render(line) + "\n"
 	}
 
-	return projects
+	parent := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#59ff00")).
+		Padding(1, 1).
+		BorderTop(false).
+		BorderRight(false).
+		BorderBottom(false)
+	
+	return parent.Render(projects)
 }
 
 func ProfileView(m Model) string {
@@ -96,7 +114,6 @@ func ProfileView(m Model) string {
 
 	content := lipgloss.JoinHorizontal(
 		lipgloss.Center,
-		projects(m),
 		profile(m),
 		projects(m),
 	)

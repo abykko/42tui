@@ -39,8 +39,6 @@ type ProfileData struct {
 	Wallet            int        `json:"wallet"`
 	EvaluationPoints  int        `json:"evaluation_points"`
 
-	LastUpdate        string     `json:"last_update"`
-
 	AlumnizedAt       *string    `json:"alumnized_at"`
 	Close             *string    `json:"close"`
 	DataErasureDate   string     `json:"data_erasure_date"`
@@ -78,12 +76,13 @@ func NewLoginForm() LoginForm {
 }
 
 type Model struct {
-	Dump	io.Writer
-	Login   LoginForm
-	Status  Status
-	Profile ProfileData
-	Page    string
-	Err		error
+	Dump				io.Writer
+	Login  				LoginForm
+	Status  			Status
+	Profile 			ProfileData
+	ProfileLastUpdate 	int64
+	Page    			string
+	Err					error
 }
 
 func InitialModel() Model {
@@ -100,8 +99,9 @@ func InitialModel() Model {
 		Dump:		dump,
 		Login:		NewLoginForm(),
 		Status:		Status{},
-		Profile:	ProfileData{LastUpdate: "foo",},
+		Profile:	ProfileData{},
 		Page:		"startup",
+		ProfileLastUpdate: 0,
 	}
 }
 

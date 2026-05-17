@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 
@@ -84,7 +85,18 @@ func logProfile(profile ProfileData) {
 }
 
 func ProfileService(m Model) (tea.Model, tea.Cmd) {
+
+	lastUpdate := m.ProfileLastUpdate
+	elapsedTime := time.Now().Unix() - lastUpdate
+
+	if elapsedTime < 30 {
+		log.Println("Tried to fetch profile. Is in cooldown!", elapsedTime, "seconds ago.")
+		return m, nil
+	}
+
 	m.Profile = fetchProfileCmd(m)
-	logProfile(m.Profile)
+
+	m.ProfileLastUpdate = time.Now().Unix()
+		
 	return m, nil
 }
