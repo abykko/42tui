@@ -22,8 +22,11 @@ func (m Model) View() tea.View {
 		{},
 	}
 
+	if m.Page == "startup" {
+		rows[1] = append(rows[1], itemStyle.Render(StartupView(m)))
+	}
 	if m.Page == "autologin" {
-		rows[1] = append(rows[1], itemStyle.Render("Autologin..."))
+		rows[1] = append(rows[1], itemStyle.Render(AutologinView(m)))
 	}
     if m.Page == "login" {
         rows[1] = append(rows[1], itemStyle.Render(LoginView(m)))

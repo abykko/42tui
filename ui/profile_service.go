@@ -86,7 +86,7 @@ func fetchProfile(m Model, user string) ProfileData {
 func ProfileService(m Model) (tea.Model, tea.Cmd) {
 
 	// Fetch data and update m.Profile
-	m.Profile = fetchProfile(m, "iamrani-")
+	m.Profile = fetchProfile(m, "")
 	m.ProfileLastUpdate = time.Now().Unix()
 
 	// Set project list content

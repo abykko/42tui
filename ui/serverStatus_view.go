@@ -6,11 +6,11 @@ import (
 
 func ServerStatusView(m Model) string {
 
-	// estilo base de cada card (CLAVE: Width fijo)
+	// estilo base de cada card
 	card := lipgloss.NewStyle().
 		Background(lipgloss.Color("#4b6a79")).
-		Padding(0, 1).
 		MarginRight(1).
+		Padding(0, 1).
 		Width(18)
 
 	// estilos de texto
