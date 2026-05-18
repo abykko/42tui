@@ -15,9 +15,11 @@ func (m Model) View() tea.View {
 
 	rows := [][]string{
 		{
-			itemStyle.Render(ServerStatusView(m)),
+			// Uncomment this line to showup a simple status bar of the
+			// 	itemStyle.Render(ServerStatusView(m)),
+			itemStyle.Render(HotbarView(m)),
 		},
-        {},
+		{},
 	}
 
 	if m.Page == "autologin" {

@@ -3,6 +3,8 @@ package ui
 import (
 	"fmt"
 	"os"
+	// "log"
+	"strings"
 	"golang.org/x/term"
 	"charm.land/lipgloss/v2"
 )
@@ -62,14 +64,17 @@ func profile(m Model) string {
 
 	wallet := m.Profile.Wallet
 
-	location := "Málaga(THIS LOCATION IS MOCKED)"
+	location := m.Profile.Location
+	if location == "" {
+		location = "Not logged in campus."
+	}
 
-	bio := "Vamos a hacer intra pero mejor, será buena idea ;)"
+	bio := "Hello World Bio!"
 
 	points := lipgloss.JoinVertical(lipgloss.Left,
 		fmt.Sprintf("Ev.P %d", evPoint),
 		fmt.Sprintf("₳ %d", wallet),
-		languageEmoji(m.Profile.Language),
+		fmt.Sprintf("Lan %s", languageEmoji(m.Profile.Language)),
 	)
 
 	info := lipgloss.JoinVertical(lipgloss.Left,
@@ -92,34 +97,76 @@ func profile(m Model) string {
 
 func projects(m Model) string {
 
-	var projects string
+	const (
+		totalWidth = 30
+		nameWidth  = 23
+		scoreWidth = 3
+	)
 
-	for _, p := range m.Profile.Projects {
+	var b strings.Builder
 
-		pStatus := "✘"
-		color := "#d32020"
+	for i, p := range m.Profile.Projects {
+
+		status := "✘"
+		statusColor := lipgloss.Color("#ff4848")
+		scoreColor := lipgloss.Color("#ff4848")
+		nameColor := lipgloss.Color("#ffffff")
+
 		if p.IsValidated {
-			color = "#59ff00"
-			pStatus = "✓"
+			status = "✓"
+			statusColor = lipgloss.Color("#9cff67")
+			scoreColor = lipgloss.Color("#9cff67")
 		}
 
-		lineStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color(color))
-		
-		line := fmt.Sprintf("%s (%d) %s", p.ProjectName, p.FinalMark, pStatus)
+		switch i % 4 {
+		case 0:
+			nameColor = lipgloss.Color("#EDEEC9")
+		case 1:
+			nameColor = lipgloss.Color("#EDEEC9")
+		case 2:
+			nameColor = lipgloss.Color("#BFD8BD")
+		case 3:
+			nameColor = lipgloss.Color("#98C9A3")
+		}
 
-		projects += lineStyle.Render(line) + "\n"
+		nameStyle := lipgloss.NewStyle().Foreground(nameColor)
+		scoreStyle := lipgloss.NewStyle().Foreground(scoreColor)
+		statusStyle := lipgloss.NewStyle().Foreground(statusColor)
+
+		// truncate name
+		nameRunes := []rune(p.ProjectName)
+
+		if len(nameRunes) > nameWidth {
+			if nameWidth > 3 {
+				nameRunes = append(nameRunes[:nameWidth-3], []rune("...")...)
+			} else {
+				nameRunes = nameRunes[:nameWidth]
+			}
+		}
+
+		name := string(nameRunes)
+
+		namePart := nameStyle.Render(fmt.Sprintf("%-*s", nameWidth, name))
+		scorePart := scoreStyle.Render(
+			fmt.Sprintf("%*d", scoreWidth, int(p.FinalMark)),
+		)
+		statusPart := statusStyle.Render(status)
+
+		line := fmt.Sprintf("%s %s %s", namePart, scorePart, statusPart)
+
+		// opcional: asegurar padding final si algo falla
+		runes := []rune(line)
+		if len(runes) < totalWidth {
+			line += strings.Repeat(" ", totalWidth-len(runes))
+		}
+
+		line = line + "\x1b[0K"
+
+		b.WriteString(line)
+		b.WriteByte('\n')
 	}
 
-	parent := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("#59ff00")).
-		Padding(1, 1).
-		BorderTop(false).
-		BorderRight(false).
-		BorderBottom(false)
-	
-	return parent.Render(projects)
+	return b.String()
 }
 
 func ProfileView(m Model) string {
@@ -136,10 +183,17 @@ func ProfileView(m Model) string {
 		return root.Render("Loading...")
 	}
 
+	vp := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#59ff00")).
+		BorderTop(false).BorderRight(false).BorderBottom(false).
+		Padding(0, 2).
+		Render(m.ProjectsViewport.View())
+
 	content := lipgloss.JoinHorizontal(
 		lipgloss.Center,
 		profile(m),
-		projects(m),
+		vp,
 	)
 
 	return root.Render(content)

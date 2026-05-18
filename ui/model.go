@@ -2,9 +2,9 @@ package ui
 
 import (
 	"io"
-	"os"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/bubbles/v2/textinput"
+	"charm.land/bubbles/v2/viewport"
 )
 
 type Status struct {
@@ -42,7 +42,7 @@ type ProfileData struct {
 	AlumnizedAt       *string    `json:"alumnized_at"`
 	Close             *string    `json:"close"`
 	DataErasureDate   string     `json:"data_erasure_date"`
-	Location          *string    `json:"location"`
+	Location          string    `json:"location"`
 
 	Groups            []any      `json:"groups"`
 	Titles            []any      `json:"titles"`
@@ -78,32 +78,35 @@ func NewLoginForm() LoginForm {
 }
 
 type Model struct {
-	Dump				io.Writer
-	Login  				LoginForm
-	Status  			Status
-	Profile 			ProfileData
-	ProfileLastUpdate 	int64
-	Page    			string
-	Err					error
+	Dump				io.Writer			// Tmp debug
+	Login  				LoginForm			// Login UI
+	Status  			Status				// Server status when starting up
+
+	Profile 			ProfileData			// Hold information to render profile
+	ProfileLastUpdate 	int64				// Track last time profile was updated
+
+	Page    			string				// Current page (ui flow)
+
+	Err					error				// Tmp debug
+
+	ProjectsViewport    viewport.Model		// Scrollview for project list section
 }
 
 func InitialModel() Model {
 
-	var dump *os.File
-    var err error
-    
-    dump, err = os.OpenFile("messages.log", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
-    if err != nil {
-        os.Exit(1)
-    }
+	// Projects viewport
+	vp := viewport.New(
+		viewport.WithWidth(30),
+		viewport.WithHeight(16),
+	)
 
 	return Model{
-		Dump:		dump,
 		Login:		NewLoginForm(),
 		Status:		Status{},
 		Profile:	ProfileData{},
 		Page:		"startup",
 		ProfileLastUpdate: 0,
+		ProjectsViewport: vp,
 	}
 }
 

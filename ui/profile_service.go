@@ -85,18 +85,12 @@ func fetchProfile(m Model, user string) ProfileData {
 
 func ProfileService(m Model) (tea.Model, tea.Cmd) {
 
-	// Updating cooldown
-	lastUpdate := m.ProfileLastUpdate
-	elapsedTime := time.Now().Unix() - lastUpdate
-
-	if elapsedTime < 8 {
-		log.Println("Tried to fetch profile. Is in cooldown!", elapsedTime, "seconds ago.")
-		return m, nil
-	}
-
 	// Fetch data and update m.Profile
-	m.Profile = fetchProfile(m, "")
+	m.Profile = fetchProfile(m, "iamrani-")
 	m.ProfileLastUpdate = time.Now().Unix()
+
+	// Set project list content
+	m.ProjectsViewport.SetContent(projects(m))
 	
 	return m, nil
 }
