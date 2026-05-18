@@ -3,8 +3,8 @@ package ui
 import (
 	"fmt"
 	"os"
-	// "log"
 	"strings"
+
 	"golang.org/x/term"
 	"charm.land/lipgloss/v2"
 )
@@ -52,54 +52,43 @@ func profile(m Model) string {
 	valueStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("252"))
 
-	firstName := m.Profile.FirstName
-	lastName := m.Profile.LastName
-	name := fmt.Sprintf("%s %s", firstName, lastName)
-
-	username := fmt.Sprintf("@%s", m.Profile.Login)
-
-	email := m.Profile.Email
-
-	evPoint := m.Profile.EvaluationPoints
-
-	wallet := m.Profile.Wallet
+	name := fmt.Sprintf("%s %s", m.Profile.FirstName, m.Profile.LastName)
+	username := "@" + m.Profile.Login
 
 	location := m.Profile.Location
 	if location == "" {
 		location = "Not logged in campus."
 	}
 
-	bio := "Hello World Bio!"
-
 	points := lipgloss.JoinVertical(lipgloss.Left,
-		fmt.Sprintf("Ev.P %d", evPoint),
-		fmt.Sprintf("₳ %d", wallet),
+		fmt.Sprintf("Ev.P %d", m.Profile.EvaluationPoints),
+		fmt.Sprintf("₳ %d", m.Profile.Wallet),
 		fmt.Sprintf("Lan %s", languageEmoji(m.Profile.Language)),
 	)
 
 	info := lipgloss.JoinVertical(lipgloss.Left,
 		nameStyle.Render(name),
 		usernameStyle.Render(username),
-		labelStyle.Render("Email: ")+valueStyle.Render(email),
+		labelStyle.Render("Email: ")+valueStyle.Render(m.Profile.Email),
 		labelStyle.Render("Location: ")+valueStyle.Render(location),
-		valueStyle.Render(bio),
+		valueStyle.Render("Hello World Bio!"),
 	)
 
-	profileContent := lipgloss.JoinHorizontal(
+	content := lipgloss.JoinHorizontal(
 		lipgloss.Top,
 		points,
 		"    ",
 		info,
 	)
 
-	return profile.Render(profileContent)
+	return profile.Render(content)
 }
 
 func projects(m Model) string {
 
 	const (
 		totalWidth = 30
-		nameWidth  = 23
+		nameWidth  = 22
 		scoreWidth = 3
 	)
 
@@ -133,34 +122,35 @@ func projects(m Model) string {
 		scoreStyle := lipgloss.NewStyle().Foreground(scoreColor)
 		statusStyle := lipgloss.NewStyle().Foreground(statusColor)
 
-		// truncate name
-		nameRunes := []rune(p.ProjectName)
+		// truncate name (safe)
+		name := p.ProjectName
+		r := []rune(name)
 
-		if len(nameRunes) > nameWidth {
+		if len(r) > nameWidth {
 			if nameWidth > 3 {
-				nameRunes = append(nameRunes[:nameWidth-3], []rune("...")...)
+				r = append(r[:nameWidth-3], []rune("...")...)
 			} else {
-				nameRunes = nameRunes[:nameWidth]
+				r = r[:nameWidth]
 			}
 		}
 
-		name := string(nameRunes)
+		name = string(r)
 
-		namePart := nameStyle.Render(fmt.Sprintf("%-*s", nameWidth, name))
-		scorePart := scoreStyle.Render(
-			fmt.Sprintf("%*d", scoreWidth, int(p.FinalMark)),
+		// IMPORTANT: let lipgloss handle width (no manual padding, no len hacks)
+		namePart := nameStyle.Width(nameWidth).Render(name)
+
+		scorePart := scoreStyle.Width(scoreWidth).Render(
+			fmt.Sprintf("%d", int(p.FinalMark)),
 		)
+
 		statusPart := statusStyle.Render(status)
 
-		line := fmt.Sprintf("%s %s %s", namePart, scorePart, statusPart)
-
-		// opcional: asegurar padding final si algo falla
-		runes := []rune(line)
-		if len(runes) < totalWidth {
-			line += strings.Repeat(" ", totalWidth-len(runes))
-		}
-
-		line = line + "\x1b[0K"
+		line := lipgloss.JoinHorizontal(
+			lipgloss.Top,
+			namePart,
+			scorePart,
+			statusPart,
+		)
 
 		b.WriteString(line)
 		b.WriteByte('\n')
@@ -177,16 +167,17 @@ func ProfileView(m Model) string {
 		Width(w).
 		AlignHorizontal(lipgloss.Center).
 		Padding(2, 0)
-	
-	id := m.Profile.ID
-	if id == 0 {
+
+	if m.Profile.ID == 0 {
 		return root.Render("Loading...")
 	}
 
 	vp := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.Color("#59ff00")).
-		BorderTop(false).BorderRight(false).BorderBottom(false).
+		BorderTop(false).
+		BorderRight(false).
+		BorderBottom(false).
 		Padding(0, 2).
 		Render(m.ProjectsViewport.View())
 
