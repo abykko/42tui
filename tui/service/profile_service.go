@@ -1,0 +1,144 @@
+package service
+
+import (
+	"encoding/json"
+	"fmt"
+	"log" // Added log package
+
+	"42cli/api"
+	"42cli/conf"
+)
+
+type Project struct {
+	Children       []any  `json:"children"`
+	FinalMark      int    `json:"final_mark"`
+	IsValidated    bool   `json:"is_validated"`
+	LastEventDate  string `json:"last_event_date"`
+	Occurrence     int    `json:"occurrence"`
+	ProjectName    string `json:"project_name"`
+	ProjectSlug    string `json:"project_slug"`
+	ProjectsUserID any    `json:"projects_user_id"`
+}
+
+type ProfileData struct {
+	ID               int    `json:"id"`
+	UserDataID       int    `json:"user_data_id"`
+	Login            string `json:"login"`
+	DisplayedLogin   string `json:"displayed_login"`
+	Email            string `json:"email"`
+	FirstName        string `json:"first_name"`
+	LastName         string `json:"last_name"`
+	Phone            string `json:"phone"`
+	Image            string `json:"image"`
+	ProfilePicture   string `json:"profile_picture"`
+	IsActive         bool   `json:"is_active"`
+	Wallet           int    `json:"wallet"`
+	EvaluationPoints int    `json:"evaluation_points"`
+
+	AlumnizedAt     *string `json:"alumnized_at"`
+	Close           *string `json:"close"`
+	DataErasureDate string  `json:"data_erasure_date"`
+	Location        string  `json:"location"`
+
+	Groups []any `json:"groups"`
+	Titles []any `json:"titles"`
+
+	Projects []Project `json:"projects"`
+
+	Language string
+}
+
+func parseProfile(resp map[string]interface{}, userLogged string) (ProfileData, error) {
+	log.Printf("[ProfileService] Parsing profile data for user: %s", userLogged)
+
+	// Most of the profile page data
+	key := fmt.Sprintf("https://intrapy.intra.42.fr/api/v1/users/%s", userLogged)
+
+	raw, ok := resp[key]
+	if !ok {
+		log.Printf("[ProfileService] Error: User key '%s' not found in response map", key)
+		return ProfileData{}, fmt.Errorf("key not found")
+	}
+
+	bytes, err := json.Marshal(raw)
+	if err != nil {
+		log.Printf("[ProfileService] Error marshaling raw user data: %v", err)
+		return ProfileData{}, err
+	}
+
+	var profile ProfileData
+	if err := json.Unmarshal(bytes, &profile); err != nil {
+		log.Printf("[ProfileService] Error unmarshaling profile structural data: %v", err)
+		return ProfileData{}, err
+	}
+	log.Println("[ProfileService] Base profile data successfully parsed")
+
+	rawProjects, ok := resp["projects"]
+	if ok {
+		log.Println("[ProfileService] Project data found, attempting to parse...")
+		projBytes, err := json.Marshal(rawProjects)
+		if err == nil {
+			var projects []Project
+			if json.Unmarshal(projBytes, &projects) == nil {
+				profile.Projects = projects
+				log.Printf("[ProfileService] Successfully parsed %d projects", len(projects))
+			} else {
+				log.Println("[ProfileService] Warning: Failed to unmarshal projects JSON")
+			}
+		} else {
+			log.Printf("[ProfileService] Warning: Failed to marshal raw projects data: %v", err)
+		}
+	} else {
+		log.Println("[ProfileService] No projects field found in response")
+	}
+
+	summary, ok := resp["summary"]
+	if ok {
+		log.Println("[ProfileService] Summary data found, attempting to parse language...")
+		if s, ok := summary.(map[string]interface{}); ok {
+			if lang, ok := s["language"].(string); ok {
+				profile.Language = lang
+				log.Printf("[ProfileService] Language identified: %s", lang)
+			} else {
+				log.Println("[ProfileService] Warning: 'language' field missing or not a string in summary")
+			}
+		} else {
+			log.Println("[ProfileService] Warning: 'summary' field is not a valid map structure")
+		}
+	}
+
+	log.Printf("[ProfileService] Parsing completed for user: %s", userLogged)
+	return profile, nil
+}
+
+func fetchProfile(user string) (ProfileData, error) {
+	log.Printf("[ProfileService] Request received to fetch profile for user: '%s'", user)
+
+	if user == "" {
+		log.Println("[ProfileService] User not provided, retrieving default fallback logged_with user...")
+		loggedUser, err := conf.GetString("logged_with")
+		if err != nil {
+			log.Printf("[ProfileService] Error retrieving logged_with from configuration: %v", err)
+			return ProfileData{}, err
+		}
+		user = loggedUser
+		log.Printf("[ProfileService] Fallback user resolved to: '%s'", user)
+	}
+
+	endpoint := fmt.Sprintf("/users/profile?user=%s", user)
+	log.Printf("[ProfileService] Making API request to endpoint: %s", endpoint)
+
+	resp, _, err := api.DoRequest(endpoint)
+	if err != nil {
+		log.Printf("[ProfileService] API request failed for endpoint %s: %v", endpoint, err)
+		return ProfileData{}, err
+	}
+	log.Println("[ProfileService] API request succeeded, proceeding to parse payload")
+
+	return parseProfile(resp, user)
+}
+
+func Profile(user string) (ProfileData, error) {
+	log.Printf("[ProfileService] External call to Profile() invoked for user: '%s'", user)
+	return fetchProfile(user)
+}

@@ -1,4 +1,4 @@
-package ui
+package views
 
 import (
 	"os"
@@ -6,7 +6,7 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
-func StartupView(m Model) string {
+func Autologin() string {
 	ascii := `
 	  .o     .oooo.             oooo   o8o  
     .d88   .dP""Y88b            '888   '"'  

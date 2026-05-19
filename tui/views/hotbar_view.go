@@ -1,4 +1,4 @@
-package ui
+package views
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	"42cli/conf"
 )
 
-func HotbarView(m Model) string {
+func Hotbar() string {
 
 	loggedUser, err := conf.GetString("logged_with")
 	if err != nil || loggedUser == "" {

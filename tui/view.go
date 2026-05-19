@@ -1,11 +1,15 @@
-package ui
+package tui
 
 import (
 	"charm.land/lipgloss/v2"
 	tea "charm.land/bubbletea/v2"
+
+	"42cli/tui/views"
 )
 
 func (m Model) View() tea.View {
+
+	m.ProjectsViewport.SetContent(views.Projects(m.Profile.Projects))
 
 	// espacio entre elementos de una row
 	itemStyle := lipgloss.NewStyle().MarginRight(2)
@@ -17,22 +21,19 @@ func (m Model) View() tea.View {
 		{
 			// Uncomment this line to showup a simple status bar of the
 			// 	itemStyle.Render(ServerStatusView(m)),
-			itemStyle.Render(HotbarView(m)),
+			itemStyle.Render(views.Hotbar()),
 		},
 		{},
 	}
 
 	if m.Page == "startup" {
-		rows[1] = append(rows[1], itemStyle.Render(StartupView(m)))
+		rows[1] = append(rows[1], itemStyle.Render(views.Startup()))
 	}
 	if m.Page == "autologin" {
-		rows[1] = append(rows[1], itemStyle.Render(AutologinView(m)))
+		rows[1] = append(rows[1], itemStyle.Render(views.Autologin()))
 	}
-    if m.Page == "login" {
-        rows[1] = append(rows[1], itemStyle.Render(LoginView(m)))
-    }
 	if m.Page  == "profile" {
-		rows[1] = append(rows[1], itemStyle.Render(ProfileView(m)))
+		rows[1] = append(rows[1], itemStyle.Render(views.Profile(m.Profile, m.ProjectsViewport)))
 	}
 
 	var renderedRows []string

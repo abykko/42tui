@@ -1,4 +1,4 @@
-package ui
+package views
 
 import (
 	"os"
@@ -6,7 +6,7 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
-func AutologinView(m Model) string {
+func Startup() string {
 	ascii := `
 	  .o     .oooo.             oooo   o8o  
     .d88   .dP""Y88b            '888   '"'  
@@ -14,7 +14,7 @@ func AutologinView(m Model) string {
 .d'  888       .d8P'  d88' '"Y8  888  '888  
 88ooo888oo   .dP'     888        888   888  
      888   .oP     .o 888   .o8  888   888  
-    o888o  8888888888 'Y8bod8P' o888o o888o
+    o888o  8888888888 'Y8bod8P' o888o o888o 
 `
 	w, _, _ := term.GetSize(int(os.Stdout.Fd()))
 

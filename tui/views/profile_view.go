@@ -1,35 +1,18 @@
-package ui
+package views
 
 import (
 	"fmt"
 	"os"
 	"strings"
-
 	"golang.org/x/term"
+
+	"charm.land/bubbles/v2/viewport"
 	"charm.land/lipgloss/v2"
+
+	"42cli/tui/service"
 )
 
-func languageEmoji(lang string) string {
-	flags := map[string]string{
-		"es": "🇪🇸",
-		"en": "🇬🇧",
-		"fr": "🇫🇷",
-		"de": "🇩🇪",
-		"it": "🇮🇹",
-		"pt": "🇵🇹",
-		"ru": "🇷🇺",
-		"ja": "🇯🇵",
-		"ko": "🇰🇷",
-		"zh": "🇨🇳",
-	}
-
-	if emoji, ok := flags[lang]; ok {
-		return emoji
-	}
-	return lang
-}
-
-func profile(m Model) string {
+func profile(p service.ProfileData) string {
 
 	profile := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
@@ -52,24 +35,24 @@ func profile(m Model) string {
 	valueStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("252"))
 
-	name := fmt.Sprintf("%s %s", m.Profile.FirstName, m.Profile.LastName)
-	username := "@" + m.Profile.Login
+	name := fmt.Sprintf("%s %s", p.FirstName, p.LastName)
+	username := "@" + p.Login
 
-	location := m.Profile.Location
+	location := p.Location
 	if location == "" {
 		location = "Not logged in campus."
 	}
 
 	points := lipgloss.JoinVertical(lipgloss.Left,
-		fmt.Sprintf("Ev.P %d", m.Profile.EvaluationPoints),
-		fmt.Sprintf("₳ %d", m.Profile.Wallet),
-		fmt.Sprintf("Lan %s", languageEmoji(m.Profile.Language)),
+		fmt.Sprintf("Ev.P %d", p.EvaluationPoints),
+		fmt.Sprintf("₳ %d", p.Wallet),
+		fmt.Sprintf("Lan %s", p.Language),
 	)
 
 	info := lipgloss.JoinVertical(lipgloss.Left,
 		nameStyle.Render(name),
 		usernameStyle.Render(username),
-		labelStyle.Render("Email: ")+valueStyle.Render(m.Profile.Email),
+		labelStyle.Render("Email: ")+valueStyle.Render(p.Email),
 		labelStyle.Render("Location: ")+valueStyle.Render(location),
 		valueStyle.Render("Hello World Bio!"),
 	)
@@ -84,17 +67,17 @@ func profile(m Model) string {
 	return profile.Render(content)
 }
 
-func projects(m Model) string {
+func Projects(projects []service.Project) string {
 
 	const (
 		totalWidth = 30
-		nameWidth  = 22
-		scoreWidth = 3
+		nameWidth  = 15
+		scoreWidth = 5
 	)
 
 	var b strings.Builder
 
-	for i, p := range m.Profile.Projects {
+	for i, p := range projects {
 
 		status := "✘"
 		statusColor := lipgloss.Color("#ff4848")
@@ -109,13 +92,17 @@ func projects(m Model) string {
 
 		switch i % 4 {
 		case 0:
-			nameColor = lipgloss.Color("#EDEEC9")
+			// Rosa pastel suave (Base/Destacado sutil)
+			nameColor = lipgloss.Color("#F7CAD0")
 		case 1:
-			nameColor = lipgloss.Color("#EDEEC9")
+			// Malva / Rosa viejo (Transición elegante)
+			nameColor = lipgloss.Color("#DEA6AF")
 		case 2:
-			nameColor = lipgloss.Color("#BFD8BD")
+			// Lavanda grisáceo (Contraste suave)
+			nameColor = lipgloss.Color("#B0A8B9")
 		case 3:
-			nameColor = lipgloss.Color("#98C9A3")
+			// Salvia / Verde oliva muy suave (Punto de quiebre armónico)
+			nameColor = lipgloss.Color("#BBCCB4")
 		}
 
 		nameStyle := lipgloss.NewStyle().Foreground(nameColor)
@@ -159,32 +146,16 @@ func projects(m Model) string {
 	return b.String()
 }
 
-func ProfileView(m Model) string {
+func Profile(p service.ProfileData, projectsVp viewport.Model) string {
 
 	w, _, _ := term.GetSize(int(os.Stdout.Fd()))
 
 	root := lipgloss.NewStyle().
 		Width(w).
-		AlignHorizontal(lipgloss.Center).
-		Padding(2, 0)
+		AlignHorizontal(lipgloss.Center)
 
-	if m.Profile.ID == 0 {
-
-		ascii := `         
-		  .-'''-.                                                                       
-.---.   '   _    \         _______                                                     
-|   | /   /' '.   \        \  ___ ' '.   .--.   _..._                                   
-|   |.   |     \  '         ' |--.\  \  |__| .'     '.   .--./)                        
-|   ||   '      |  '        | |    \  ' .--..   .-.   . /.''\\                         
-|   |\    \     / /  __     | |     |  '|  ||  '   '  || |  | |                        
-|   | '.   ' ..' /.:--.'.   | |     |  ||  ||  |   |  | \' -' /                         
-|   |    '-...-' '/ |   \ |  | |     ' .'|  ||  |   |  | /("'')                          
-|   |            '"' __ | |  | |___.' /' |  ||  |   |  | \ '---.   ,.--.  ,.--.  ,.--.  
-|   |             .'.''| | /_______.'/  |__||  |   |  |  /'""'.\ //    \//    \//    \ 
-'---'            / /   | |_\_______|/       |  |   |  | ||     ||\\    /\\    /\\    / 
-                 \ \._,' '/                 |  |   |  | \'. __//  ''--'  ''--'  ''--'  
-                  '---'  '"                  '--'   '--'  '---'                       
-`
+	if p.ID == 0 {
+		ascii := `loading`
 		return root.Render(ascii)
 	}
 
@@ -195,11 +166,11 @@ func ProfileView(m Model) string {
 		BorderRight(false).
 		BorderBottom(false).
 		Padding(0, 2).
-		Render(m.ProjectsViewport.View())
+		Render(projectsVp.View())
 
 	content := lipgloss.JoinHorizontal(
 		lipgloss.Center,
-		profile(m),
+		profile(p),
 		vp,
 	)
 

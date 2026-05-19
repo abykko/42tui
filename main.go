@@ -1,25 +1,9 @@
 package main
 
 import (
-    "fmt"
-    "os"
-    "42cli/conf"
-    "42cli/server-deployment"
-    "42cli/ui"
-    tea "charm.land/bubbletea/v2"
+	"42cli/tui"
 )
 
 func main() {
-
-    defer func() {
-		deployment.Stop()
-        deployment.StopByImage()
-        conf.Set("logged_with", "")
-    }()
-
-    p := tea.NewProgram(ui.InitialModel())
-    if _, err := p.Run(); err != nil {
-        fmt.Fprintf(os.Stderr, "Error: %v", err)
-        os.Exit(1)
-    }
+	tui.Tui()
 }

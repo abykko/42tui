@@ -2,7 +2,7 @@ package deployment
 
 import (
 	"os"
-	"fmt"
+	"log"
 	"os/exec"
 	"crypto/rand"
 	"encoding/hex"
@@ -24,37 +24,45 @@ func generateSecret() string {
 func Build() error {
 
 	secret := generateSecret()
+	log.Println("[build] generated secret")
 
 	secretEnv, err := conf.GetString("secret_env_var_name")
 	if err != nil {
-		return fmt.Errorf("error getting secret env name: %w", err)
+		log.Println("[build] error getting secret env name:", err)
+		return err
 	}
 
-	// We store it to use the api
 	if err := os.Setenv(secretEnv, secret); err != nil {
-		return fmt.Errorf("error setting SECRET env var: %w", err)
+		log.Println("[build] error setting SECRET env var:", err)
+		return err
 	}
+	log.Println("[build] set env var %s\n", secretEnv)
 
-	// Load config
 	servDir, err := conf.GetString("server_dir")
 	if err != nil {
-		return fmt.Errorf("error getting server_dir: %w", err)
+		log.Println("[build] error getting server_dir:", err)
+		return err
 	}
 
 	imageName, err := conf.GetString("podman_image_name")
 	if err != nil {
-		return fmt.Errorf("error getting podman_image_name: %w", err)
+		log.Println("[build] error getting podman_image_name:", err)
+		return err
 	}
 
-	// Remove the containers if already exists for any reason
+	log.Println("[build] building podman image %s in %s\n", imageName, servDir)
+
 	StopByImage()
 
 	cmd := exec.Command("podman", "build", "-t", imageName, ".")
 	cmd.Dir = servDir
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("error building podman image: %w", err)
+		log.Println("[build] error building podman image:", err)
+		return err
 	}
+
+	log.Println("[build] podman build completed successfully")
 
 	return nil
 }
