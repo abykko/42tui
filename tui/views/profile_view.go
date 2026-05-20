@@ -264,7 +264,7 @@ func Profile(p service.ProfileData, projectsVp viewport.Model) string {
 		BorderRight(false).
 		BorderForeground(lipgloss.Color("#FF5FAF")).
 		Padding(0, 1).
-		Render(profile(p, 42))
+		Render(profile(p, 40))
 
 	projectsList := lipgloss.NewStyle().
 		Padding(0, 1).

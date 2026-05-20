@@ -9,8 +9,6 @@ import (
 
 func (m Model) View() tea.View {
 
-	m.ProjectsViewport.SetContent(views.Projects(m.Profile.Projects))
-
 	// espacio entre elementos de una row
 	itemStyle := lipgloss.NewStyle().MarginRight(2)
 

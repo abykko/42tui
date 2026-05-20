@@ -1,151 +1,139 @@
 package tui
 
 import (
-	"time"
 	"log"
+	"time"
+
 	tea "charm.land/bubbletea/v2"
 
 	"42cli/conf"
 	"42cli/tui/service"
+	"42cli/tui/views"
 	deployment "42cli/server-deployment"
 )
 
-// Messages
-
 type AutologinMsg struct {
-	User	string
-	Pass	string
+	User string
+	Pass string
 }
 
-type LoginMsg struct {}
+type LoginMsg struct{}
 
 type ProfileMsg struct {
-	User	string
+	User string
 }
 
-type ClockUpdate	struct {
-	Time	string
-}
+type ClockUpdate struct{}
 
 func getDateTime() (string, string) {
 	now := time.Now()
-
 	day := now.Format("02 Jan")
 	timeStr := now.Format("15:04:05")
-
 	return day, timeStr
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
-	var cmd tea.Cmd
-	m.ProjectsViewport, cmd = m.ProjectsViewport.Update(msg)
-
-	// Initialize the clock
+	// Initialize the clock 
 	if m.Clock.Time == "" {
 		m.Clock.Day, m.Clock.Time = getDateTime()
-		return m, func() tea.Msg { return ClockUpdate{} }
+		return m, func() tea.Msg { return ClockUpdate{} } 
 	}
 
-	// Keyboard interruption handler
+	var cmds []tea.Cmd
+
+	var vpCmd tea.Cmd
+	m.ProjectsViewport, vpCmd = m.ProjectsViewport.Update(msg)
+	cmds = append(cmds, vpCmd)
+
 	switch msg := msg.(type) {
-	case tea.KeyPressMsg:
+
+	case tea.KeyMsg:
 		log.Println("KEY:", msg.String())
+
 		if msg.String() == "ctrl+c" {
-			log.Println("[System] Saliendo del programa (Ctrl+C)...")
+			log.Println("[System] exiting...")
 			return m, tea.Quit
 		}
 
-		var err error
+		// TMP DEBUG
 		if msg.String() == "a" {
-			m.Profile, err = service.Profile("msouiyeh")
+			return m, func() tea.Msg {
+				return ProfileMsg{User: "msouiyeh"}
+			}
 		}
-		if msg.String() == "b" {
-			m.Profile, err = service.Profile("iamrani-")
+		if msg.String() == "a" {
+			return m, func() tea.Msg {
+				return ProfileMsg{User: "iamrani-"}
+			}
 		}
 
-		if err != nil {
-			return m, tea.Quit
-		}
-	
 	case ClockUpdate:
 		m.Clock.Day, m.Clock.Time = getDateTime()
-		return m, func() tea.Msg { return ClockUpdate{} }
-	
+
+		// keep ticking
+		cmds = append(cmds, func() tea.Msg {
+			time.Sleep(1 * time.Second)
+			return ClockUpdate{}
+		})
+
 	case AutologinMsg:
 
 		m.Page = "autologin"
 
-		log.Println("[Autologin] Obtaining credentials")
-		log.Println("[Autologin] Welcome", msg.User)
-
 		ok, err := service.Login(msg.User, msg.Pass)
 		if err != nil {
-			log.Println("[Autologin] Error:", err)
+			log.Println("[Autologin] error:", err)
 			return m, tea.Quit
 		}
+
 		if !ok {
-			log.Println("[Autologin] Autologin failed")
-			log.Println("[Autologin] Autologin failed")
-			return m, func() tea.Msg {
-				return LoginMsg{}
-			}
+			return m, func() tea.Msg { return LoginMsg{} }
 		}
-		if ok {
-			log.Println("[Autologin] Autologin success")
-			return m, func() tea.Msg {
-				return ProfileMsg{
-					User: msg.User,
-				}
-			}
+
+		return m, func() tea.Msg {
+			return ProfileMsg{User: msg.User}
 		}
 
 	case LoginMsg:
-
 		m.Page = "login"
-		log.Println("Loginmsg")
-	
-	case ProfileMsg:
 
+	case ProfileMsg:
 		m.Page = "profile"
 
 		var err error
 		m.Profile, err = service.Profile(msg.User)
 		if err != nil {
-			log.Println("[ProfileMsg] Error", err)
+			log.Println("[Profile] error:", err)
 			return m, tea.Quit
 		}
 
-		return m, func() tea.Msg {
-			return 0
-		}
+		m.ProjectsViewport.SetContent(views.Projects(m.Profile.Projects))
+
+	case tea.WindowSizeMsg:
+		// m.ProjectsViewport.Width = msg.Width
+		// m.ProjectsViewport.Height = msg.Height
 	}
 
 	if m.Page == "startup" {
 		m.Page = ""
-		// Deploy server
+
 		ok, err := service.Startup()
 		if err != nil {
 			deployment.Stop()
 			return m, tea.Quit
 		}
+
 		if ok {
-			// Check if autologin is enabled
 			autoLogin, err := conf.GetBool("autologin")
 			if err != nil {
-				log.Println("[Startup] error reading autologin setting:", err)
+				log.Println("[Startup] autologin config error:", err)
 				return m, tea.Quit
 			}
 
 			if !autoLogin {
-				log.Println("[Startup] GO LOGIN PAGE")
-				return m, func() tea.Msg {
-					return LoginMsg{}
-				}
+				return m, func() tea.Msg { return LoginMsg{} }
 			}
-
-			// Start autologin
-			log.Println("[Startup] autologin enabled")
 
 			user, pass, _ := service.Autologin()
 
@@ -158,5 +146,5 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	return m, cmd
+	return m, tea.Batch(cmds...)
 }
