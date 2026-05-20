@@ -18,7 +18,6 @@ func profilePicture(userID int) string {
 	h := sha256.Sum256([]byte(fmt.Sprintf("%d", userID)))
 	hash := h[:]
 
-	// paleta de colores (puedes ampliarla)
 	palette := []string{
 		"#5F5FAF", // azul violeta
 		"#FF5FAF", // rosa
@@ -45,7 +44,9 @@ func profilePicture(userID int) string {
 
 			b.WriteString(style.Render("██"))
 		}
-		b.WriteString("\n")
+		if i != height - 1 {
+			b.WriteString("\n")
+		}
 	}
 
 	return lipgloss.NewStyle().
@@ -53,11 +54,7 @@ func profilePicture(userID int) string {
 		Render(b.String())
 }
 
-func profile(p service.ProfileData) string {
-
-	profileStyle := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("#5F5FAF"))
+func profile(p service.ProfileData, maxSize int) string {
 
 	nameStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#FF5FAF")).
@@ -80,9 +77,22 @@ func profile(p service.ProfileData) string {
 		location = "Not logged."
 	}
 
+	header := lipgloss.NewStyle().
+		Width(maxSize).
+		Render(
+			lipgloss.JoinHorizontal(
+				lipgloss.Top,
+				nameStyle.Render(fullName),
+				lipgloss.NewStyle().
+					Width(maxSize - len(fullName) - len(username)).
+					Render(""),
+				usernameStyle.Render(username),
+			),
+		)
+
 	info := lipgloss.JoinVertical(
 		lipgloss.Left,
-		nameStyle.Render(fullName)+"    "+usernameStyle.Render(username),
+		header,
 		labelStyle.Render("Email: ")+valueStyle.Render(p.Email),
 		labelStyle.Render("Location: ")+valueStyle.Render(location),
 		labelStyle.Render("Bio {"),
@@ -100,7 +110,7 @@ func profile(p service.ProfileData) string {
 		info,
 	)
 
-	return profileStyle.Render(content)
+	return content
 }
 
 func Projects(projects []service.Project) string {
@@ -173,18 +183,19 @@ func Projects(projects []service.Project) string {
 		projectsBuilder.WriteByte('\n')
 	}
 
+	projectsBuilder.WriteString("EOF")
+
 	projectsList := projectsBuilder.String()
 
 	projectsHeaderStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#e75fff"))
 
 	projectsHeader := lipgloss.JoinHorizontal(
-		lipgloss.Center,
+		lipgloss.Left,
 		projectsHeaderStyle.Render("⛶ Projects ⛶"),
 	)
 
-	content := lipgloss.JoinVertical(
-		lipgloss.Center,
+	content := lipgloss.JoinVertical(lipgloss.Center,
 		projectsHeader,
 		projectsList,
 	)
@@ -196,24 +207,44 @@ func Profile(p service.ProfileData, projectsVp viewport.Model) string {
 
 	w, _, _ := term.GetSize(int(os.Stdout.Fd()))
 
+	if p.ID == 0 {
+		return lipgloss.NewStyle().
+			Width(w).
+			AlignHorizontal(lipgloss.Center).
+			Render("loading")
+	}
+
+	// Profile box con altura fija
+	profileBox := lipgloss.NewStyle().
+		AlignVertical(lipgloss.Top).
+		Border(lipgloss.RoundedBorder()).
+		BorderTop(false).BorderBottom(false).BorderRight(false).
+		BorderForeground(lipgloss.Color("#FF5FAF")).
+		Padding(0, 1).
+		Render(profile(p, 42))
+
+	// Projects box con altura fija
+	projectsBox := lipgloss.NewStyle().
+		AlignVertical(lipgloss.Top).
+		AlignVertical(lipgloss.Top).
+		Border(lipgloss.RoundedBorder()).
+		BorderTop(false).BorderBottom(false).BorderLeft(false).
+		BorderForeground(lipgloss.Color("#FF5FAF")).
+		Padding(0, 1).
+		Render(projectsVp.View())
+
+	// Layout horizontal con alineación consistente
+	content := lipgloss.JoinHorizontal(
+		lipgloss.Top,
+		profileBox,
+		" ",
+		projectsBox,
+	)
+
+	// Root centrado
 	root := lipgloss.NewStyle().
 		Width(w).
 		AlignHorizontal(lipgloss.Center)
-
-	if p.ID == 0 {
-		return root.Render("loading")
-	}
-
-	projectsViewport := lipgloss.NewStyle().
-		Align(lipgloss.Center).
-		Border(lipgloss.RoundedBorder()).
-		Render(projectsVp.View())
-
-	content := lipgloss.JoinHorizontal(
-		lipgloss.Center,
-		profile(p),
-		projectsViewport,
-	)
 
 	return root.Render(content)
 }

@@ -60,7 +60,7 @@ func InitialModel() Model {
 	// Projects viewport
 	vp := viewport.New(
 		viewport.WithWidth(30),
-		viewport.WithHeight(10),
+		viewport.WithHeight(15),
 	)
 
 	return Model{
