@@ -214,37 +214,41 @@ func Profile(p service.ProfileData, projectsVp viewport.Model) string {
 			Render("loading")
 	}
 
-	// Profile box con altura fija
 	profileBox := lipgloss.NewStyle().
-		AlignVertical(lipgloss.Top).
 		Border(lipgloss.RoundedBorder()).
-		BorderTop(false).BorderBottom(false).BorderRight(false).
+		BorderTop(false).
+		BorderBottom(false).
+		BorderRight(false).
 		BorderForeground(lipgloss.Color("#FF5FAF")).
 		Padding(0, 1).
 		Render(profile(p, 42))
 
-	// Projects box con altura fija
 	projectsBox := lipgloss.NewStyle().
-		AlignVertical(lipgloss.Top).
-		AlignVertical(lipgloss.Top).
 		Border(lipgloss.RoundedBorder()).
-		BorderTop(false).BorderBottom(false).BorderLeft(false).
+		BorderTop(false).
+		BorderBottom(false).
+		BorderLeft(false).
 		BorderForeground(lipgloss.Color("#FF5FAF")).
 		Padding(0, 1).
 		Render(projectsVp.View())
 
-	// Layout horizontal con alineación consistente
-	content := lipgloss.JoinHorizontal(
+	profileAndProjects := lipgloss.JoinHorizontal(
 		lipgloss.Top,
 		profileBox,
 		" ",
 		projectsBox,
 	)
 
-	// Root centrado
-	root := lipgloss.NewStyle().
+	layout := lipgloss.NewStyle().
 		Width(w).
-		AlignHorizontal(lipgloss.Center)
+		AlignHorizontal(lipgloss.Center).
+		Render(
+			lipgloss.JoinVertical(
+				lipgloss.Top,
+				profileAndProjects,
+				"New sections coming soon...",
+			),
+		)
 
-	return root.Render(content)
+	return layout
 }
