@@ -3,11 +3,41 @@ package service
 import (
 	"encoding/json"
 	"fmt"
-	"log" // Added log package
+	"log"
 
 	"42cli/api"
 	"42cli/conf"
 )
+
+type Milestone struct {
+	Deadline    string  `json:"deadline"`
+	Level       int     `json:"level"`
+	MilestoneID int     `json:"milestone_id"`
+	UserID      int     `json:"user_id"`
+	ValidatedAt *string `json:"validated_at"` // Puntero por si llega null
+}
+
+type Pace struct {
+	ActivatedAt            string      `json:"activated_at"`
+	CursusBeginDate        string      `json:"cursus_begin_date"`
+	Deadline               string      `json:"deadline"`
+	EndOfCursusMaxDeadline string      `json:"end_of_cursus_max_deadline"`
+	EtaEndOfCursus         string      `json:"eta_end_of_cursus"`
+	IsActivated            bool        `json:"is_activated"`
+	IsCampusActivated      bool        `json:"is_campus_activated"`
+	Milestone              int         `json:"milestone"`
+	Milestones             []Milestone `json:"milestones"`
+	Pace                   int         `json:"pace"`
+	PaceSpeedUp            *int        `json:"pace_speed_up"` // Puntero por si llega null
+	ProbationaryPeriod     bool        `json:"probationary_period"`
+}
+
+type Team struct {
+	FinalMark     int    `json:"final_mark"`
+	IsValidated   bool   `json:"is_validated"`
+	LastEventDate string `json:"last_event_date"`
+	Occurrence    int    `json:"occurrence"`
+}
 
 type Project struct {
 	Children       []any  `json:"children"`
@@ -17,42 +47,40 @@ type Project struct {
 	Occurrence     int    `json:"occurrence"`
 	ProjectName    string `json:"project_name"`
 	ProjectSlug    string `json:"project_slug"`
-	ProjectsUserID any    `json:"projects_user_id"`
+	ProjectsUserID int    `json:"projects_user_id"` // Cambiado de any a int según tu JSON
+	Teams          []Team `json:"teams"`             // Añadido para procesar el array de equipos
 }
 
 type ProfileData struct {
-	ID               int    `json:"id"`
-	UserDataID       int    `json:"user_data_id"`
-	Login            string `json:"login"`
-	DisplayedLogin   string `json:"displayed_login"`
-	Email            string `json:"email"`
-	FirstName        string `json:"first_name"`
-	LastName         string `json:"last_name"`
-	Phone            string `json:"phone"`
-	Image            string `json:"image"`
-	ProfilePicture   string `json:"profile_picture"`
-	IsActive         bool   `json:"is_active"`
-	Wallet           int    `json:"wallet"`
-	EvaluationPoints int    `json:"evaluation_points"`
-
-	AlumnizedAt     *string `json:"alumnized_at"`
-	Close           *string `json:"close"`
-	DataErasureDate string  `json:"data_erasure_date"`
-	Location        string  `json:"location"`
-
-	Groups []any `json:"groups"`
-	Titles []any `json:"titles"`
-
-	Projects []Project `json:"projects"`
-
-	Language string
+	ID               int     `json:"id"`
+	UserDataID       int     `json:"user_data_id"`
+	Login            string  `json:"login"`
+	DisplayedLogin   string  `json:"displayed_login"`
+	Email            string  `json:"email"`
+	FirstName        string  `json:"first_name"`
+	LastName         string  `json:"last_name"`
+	Phone            string  `json:"phone"`
+	Image            string  `json:"image"`
+	ProfilePicture   string  `json:"profile_picture"`
+	IsActive         bool    `json:"is_active"`
+	Wallet           int     `json:"wallet"`
+	EvaluationPoints int     `json:"evaluation_points"`
+	AlumnizedAt      *string `json:"alumnized_at"`
+	Close            *string `json:"close"`
+	DataErasureDate  string  `json:"data_erasure_date"`
+	Location         string `json:"location"`
+	Groups           []any   `json:"groups"`
+	Titles           []any   `json:"titles"`
+	Projects         []Project `json:"projects"`
+	Pace             Pace    `json:"pace"`     // Vinculado correctamente
+	Language         string  `json:"language"`
 }
 
 func parseProfile(resp map[string]interface{}, userLogged string) (ProfileData, error) {
 	log.Printf("[ProfileService] Parsing profile data for user: %s", userLogged)
 
 	// Most of the profile page data
-	key := fmt.Sprintf("https://intrapy.intra.42.fr/api/v1/users/%s", userLogged)
+	key := "profile"
 
 	raw, ok := resp[key]
 	if !ok {
@@ -72,6 +100,26 @@ func parseProfile(resp map[string]interface{}, userLogged string) (ProfileData, 
 		return ProfileData{}, err
 	}
 	log.Println("[ProfileService] Base profile data successfully parsed")
+
+	// Parsear el campo "pace" de la respuesta raíz
+	rawPace, ok := resp["pace"]
+	if ok {
+		log.Println("[ProfileService] Pace data found, attempting to parse...")
+		paceBytes, err := json.Marshal(rawPace)
+		if err == nil {
+			var pace Pace
+			if json.Unmarshal(paceBytes, &pace) == nil {
+				profile.Pace = pace
+				log.Println("[ProfileService] Successfully parsed pace data")
+			} else {
+				log.Println("[ProfileService] Warning: Failed to unmarshal pace JSON")
+			}
+		} else {
+			log.Printf("[ProfileService] Warning: Failed to marshal raw pace data: %v", err)
+		}
+	} else {
+		log.Println("[ProfileService] No pace field found in response")
+	}
 
 	rawProjects, ok := resp["projects"]
 	if ok {

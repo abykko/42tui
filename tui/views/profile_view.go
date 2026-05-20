@@ -204,6 +204,43 @@ func Projects(projects []service.Project) string {
 	return content
 }
 
+func pace(p service.ProfileData) string {
+	currentMilestone := p.Pace.Milestone
+
+	passedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#2ecc71")).Padding(0, 1)
+	currentStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("24")).Bold(true).Padding(0, 1)
+	pendingStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#7f8c8d")).Padding(0, 1)
+
+	// Usamos un builder para ir creando el string grande de forma eficiente
+	var milestonesBuilder strings.Builder
+
+	for i := 0; i <= 6; i++ {
+		label := fmt.Sprintf("Milestone %d", i)
+		var renderedLine string
+
+		switch {
+		case i < currentMilestone:
+			renderedLine = passedStyle.Render("✔ " + label)
+		case i == currentMilestone:
+			renderedLine = currentStyle.Render(label + " ◀")
+		default:
+			renderedLine = pendingStyle.Render("○ " + label)
+		}
+
+		// Si no es la primera línea, añadimos el salto de línea antes de la siguiente
+		if i > 0 {
+			milestonesBuilder.WriteString("\n")
+		}
+		milestonesBuilder.WriteString(renderedLine)
+	}
+
+	// Ahora JoinVertical recibe dos strings planos: el título y el bloque completo
+	return lipgloss.JoinVertical(lipgloss.Left,
+		"Milestones",
+		milestonesBuilder.String(),
+	)
+}
+
 func Profile(p service.ProfileData, projectsVp viewport.Model) string {
 
 	w, _, _ := term.GetSize(int(os.Stdout.Fd()))
@@ -233,9 +270,14 @@ func Profile(p service.ProfileData, projectsVp viewport.Model) string {
 		Padding(0, 1).
 		Render(projectsVp.View())
 
-	cursusStatus := lipgloss.JoinHorizontal(lipgloss.Left,
-		"milestone 0",
-	)
+	cursusStatus := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderTop(false).
+		BorderBottom(false).
+		BorderRight(false).
+		BorderForeground(lipgloss.Color("#FF5FAF")).
+		Padding(2, 1).
+		Render(pace(p))
 
 	profileSection := lipgloss.JoinHorizontal(
 		lipgloss.Top,
