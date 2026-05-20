@@ -193,7 +193,7 @@ func Projects(projects []service.Project) string {
 
 	projectsHeader := lipgloss.JoinHorizontal(
 		lipgloss.Left,
-		projectsHeaderStyle.Render("⛶ Projects ⛶"),
+		projectsHeaderStyle.Render("Submitted Projects ⛶"),
 	)
 
 	content := lipgloss.JoinVertical(lipgloss.Center,
@@ -206,6 +206,11 @@ func Projects(projects []service.Project) string {
 
 func pace(p service.ProfileData) string {
 	currentMilestone := p.Pace.Milestone
+
+	lastMilestoneValidated := p.Pace.Milestones[6].ValidatedAt
+	if lastMilestoneValidated != "" {
+		currentMilestone = 7
+	}
 
 	passedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#2ecc71")).Padding(0, 1)
 	currentStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("24")).Bold(true).Padding(0, 1)
@@ -236,7 +241,7 @@ func pace(p service.ProfileData) string {
 
 	// Ahora JoinVertical recibe dos strings planos: el título y el bloque completo
 	return lipgloss.JoinVertical(lipgloss.Left,
-		"Milestones",
+		"Cursus progress",
 		milestonesBuilder.String(),
 	)
 }
@@ -262,20 +267,10 @@ func Profile(p service.ProfileData, projectsVp viewport.Model) string {
 		Render(profile(p, 42))
 
 	projectsList := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderTop(false).
-		BorderBottom(false).
-		BorderLeft(false).
-		BorderForeground(lipgloss.Color("#FF5FAF")).
 		Padding(0, 1).
 		Render(projectsVp.View())
 
 	cursusStatus := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderTop(false).
-		BorderBottom(false).
-		BorderRight(false).
-		BorderForeground(lipgloss.Color("#FF5FAF")).
 		Padding(2, 1).
 		Render(pace(p))
 

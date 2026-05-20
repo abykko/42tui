@@ -14,7 +14,7 @@ type Milestone struct {
 	Level       int     `json:"level"`
 	MilestoneID int     `json:"milestone_id"`
 	UserID      int     `json:"user_id"`
-	ValidatedAt *string `json:"validated_at"` // Puntero por si llega null
+	ValidatedAt string `json:"validated_at"` // Puntero por si llega null
 }
 
 type Pace struct {
