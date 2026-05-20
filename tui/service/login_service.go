@@ -4,6 +4,7 @@ import (
     "fmt"
 
     "42cli/api"
+    "42cli/conf"
 )
 
 func Login(user, passwd string) (bool, error) {
@@ -15,5 +16,13 @@ func Login(user, passwd string) (bool, error) {
     }
 
     ok, _ := resp["login"].(bool)
+
+    if ok {
+        err := conf.Set("logged_with", user)
+        if err != nil {
+            return ok, err
+        }
+    }
+
     return ok, nil
 }

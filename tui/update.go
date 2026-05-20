@@ -1,7 +1,7 @@
 package tui
 
 import (
-	// "time"
+	"time"
 	"log"
 	tea "charm.land/bubbletea/v2"
 
@@ -23,10 +23,29 @@ type ProfileMsg struct {
 	User	string
 }
 
+type ClockUpdate	struct {
+	Time	string
+}
+
+func getDateTime() (string, string) {
+	now := time.Now()
+
+	day := now.Format("02 Jan")
+	timeStr := now.Format("15:04:05")
+
+	return day, timeStr
+}
+
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	var cmd tea.Cmd
 	m.ProjectsViewport, cmd = m.ProjectsViewport.Update(msg)
+
+	// Initialize the clock
+	if m.Clock.Time == "" {
+		m.Clock.Day, m.Clock.Time = getDateTime()
+		return m, func() tea.Msg { return ClockUpdate{} }
+	}
 
 	// Keyboard interruption handler
 	switch msg := msg.(type) {
@@ -48,6 +67,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if err != nil {
 			return m, tea.Quit
 		}
+	
+	case ClockUpdate:
+		m.Clock.Day, m.Clock.Time = getDateTime()
+		return m, func() tea.Msg { return ClockUpdate{} }
 	
 	case AutologinMsg:
 

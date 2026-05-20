@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"crypto/sha256"
 	"golang.org/x/term"
 
 	"charm.land/bubbles/v2/viewport"
@@ -12,59 +13,94 @@ import (
 	"42cli/tui/service"
 )
 
+func profilePicture(userID int) string {
+	// hash del usuario
+	h := sha256.Sum256([]byte(fmt.Sprintf("%d", userID)))
+	hash := h[:]
+
+	// paleta de colores (puedes ampliarla)
+	palette := []string{
+		"#5F5FAF", // azul violeta
+		"#FF5FAF", // rosa
+		"#7CFF6B", // verde
+		"#FFD166", // amarillo
+		"#06D6A0", // aqua
+		"#EF476F", // rojo suave
+		"#A78BFA", // violeta claro
+	}
+
+	width := 6
+	height := 6
+
+	var b strings.Builder
+
+	for i := 0; i < height; i++ {
+		for j := 0; j < width; j++ {
+
+			// usa el hash para elegir color determinista
+			idx := int(hash[(i*width+j)%len(hash)]) % len(palette)
+
+			style := lipgloss.NewStyle().
+				Foreground(lipgloss.Color(palette[idx]))
+
+			b.WriteString(style.Render("██"))
+		}
+		b.WriteString("\n")
+	}
+
+	return lipgloss.NewStyle().
+		Padding(0, 1).
+		Render(b.String())
+}
+
 func profile(p service.ProfileData) string {
 
-	profile := lipgloss.NewStyle().
+	profileStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderLeft(false).
-		BorderRight(false).
-		BorderForeground(lipgloss.Color("63")).
-		Padding(1, 2).
-		Width(60)
+		BorderForeground(lipgloss.Color("#5F5FAF"))
 
 	nameStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("205")).
+		Foreground(lipgloss.Color("#FF5FAF")).
 		Bold(true)
 
 	usernameStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("240"))
+		Foreground(lipgloss.Color("#615c65"))
 
 	labelStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("241"))
+		Foreground(lipgloss.Color("#6f6f6f"))
 
 	valueStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("252"))
+		Foreground(lipgloss.Color("#D0D0D0"))
 
-	name := fmt.Sprintf("%s %s", p.FirstName, p.LastName)
+	fullName := fmt.Sprintf("%s %s", p.FirstName, p.LastName)
 	username := "@" + p.Login
 
 	location := p.Location
 	if location == "" {
-		location = "Not logged in campus."
+		location = "Not logged."
 	}
 
-	points := lipgloss.JoinVertical(lipgloss.Left,
-		fmt.Sprintf("Ev.P %d", p.EvaluationPoints),
-		fmt.Sprintf("₳ %d", p.Wallet),
-		fmt.Sprintf("Lan %s", p.Language),
-	)
-
-	info := lipgloss.JoinVertical(lipgloss.Left,
-		nameStyle.Render(name),
-		usernameStyle.Render(username),
+	info := lipgloss.JoinVertical(
+		lipgloss.Left,
+		nameStyle.Render(fullName)+"    "+usernameStyle.Render(username),
 		labelStyle.Render("Email: ")+valueStyle.Render(p.Email),
 		labelStyle.Render("Location: ")+valueStyle.Render(location),
-		valueStyle.Render("Hello World Bio!"),
+		labelStyle.Render("Bio {"),
+		valueStyle.Render(fmt.Sprintf("    text: Hello, I'm %s! 🐌", p.FirstName)),
+		labelStyle.Render("};"),
 	)
+
+	// We pass the ID to generate a unique noise profile picture
+	avatar := profilePicture(p.ID)
 
 	content := lipgloss.JoinHorizontal(
 		lipgloss.Top,
-		points,
-		"    ",
+		avatar,
+		" ",
 		info,
 	)
 
-	return profile.Render(content)
+	return profileStyle.Render(content)
 }
 
 func Projects(projects []service.Project) string {
@@ -75,7 +111,7 @@ func Projects(projects []service.Project) string {
 		scoreWidth = 5
 	)
 
-	var b strings.Builder
+	var projectsBuilder strings.Builder
 
 	for i, p := range projects {
 
@@ -92,16 +128,12 @@ func Projects(projects []service.Project) string {
 
 		switch i % 4 {
 		case 0:
-			// Rosa pastel suave (Base/Destacado sutil)
 			nameColor = lipgloss.Color("#F7CAD0")
 		case 1:
-			// Malva / Rosa viejo (Transición elegante)
 			nameColor = lipgloss.Color("#DEA6AF")
 		case 2:
-			// Lavanda grisáceo (Contraste suave)
 			nameColor = lipgloss.Color("#B0A8B9")
 		case 3:
-			// Salvia / Verde oliva muy suave (Punto de quiebre armónico)
 			nameColor = lipgloss.Color("#BBCCB4")
 		}
 
@@ -109,7 +141,6 @@ func Projects(projects []service.Project) string {
 		scoreStyle := lipgloss.NewStyle().Foreground(scoreColor)
 		statusStyle := lipgloss.NewStyle().Foreground(statusColor)
 
-		// truncate name (safe)
 		name := p.ProjectName
 		r := []rune(name)
 
@@ -123,7 +154,6 @@ func Projects(projects []service.Project) string {
 
 		name = string(r)
 
-		// IMPORTANT: let lipgloss handle width (no manual padding, no len hacks)
 		namePart := nameStyle.Width(nameWidth).Render(name)
 
 		scorePart := scoreStyle.Width(scoreWidth).Render(
@@ -139,11 +169,27 @@ func Projects(projects []service.Project) string {
 			statusPart,
 		)
 
-		b.WriteString(line)
-		b.WriteByte('\n')
+		projectsBuilder.WriteString(line)
+		projectsBuilder.WriteByte('\n')
 	}
 
-	return b.String()
+	projectsList := projectsBuilder.String()
+
+	projectsHeaderStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#e75fff"))
+
+	projectsHeader := lipgloss.JoinHorizontal(
+		lipgloss.Center,
+		projectsHeaderStyle.Render("⛶ Projects ⛶"),
+	)
+
+	content := lipgloss.JoinVertical(
+		lipgloss.Center,
+		projectsHeader,
+		projectsList,
+	)
+
+	return content
 }
 
 func Profile(p service.ProfileData, projectsVp viewport.Model) string {
@@ -155,23 +201,18 @@ func Profile(p service.ProfileData, projectsVp viewport.Model) string {
 		AlignHorizontal(lipgloss.Center)
 
 	if p.ID == 0 {
-		ascii := `loading`
-		return root.Render(ascii)
+		return root.Render("loading")
 	}
 
-	vp := lipgloss.NewStyle().
+	projectsViewport := lipgloss.NewStyle().
+		Align(lipgloss.Center).
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("#59ff00")).
-		BorderTop(false).
-		BorderRight(false).
-		BorderBottom(false).
-		Padding(0, 2).
 		Render(projectsVp.View())
 
 	content := lipgloss.JoinHorizontal(
 		lipgloss.Center,
 		profile(p),
-		vp,
+		projectsViewport,
 	)
 
 	return root.Render(content)

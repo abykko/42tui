@@ -21,7 +21,7 @@ func (m Model) View() tea.View {
 		{
 			// Uncomment this line to showup a simple status bar of the
 			// 	itemStyle.Render(ServerStatusView(m)),
-			itemStyle.Render(views.Hotbar()),
+			itemStyle.Render(views.Hotbar(m.Clock.Day, m.Clock.Time)),
 		},
 		{},
 	}
