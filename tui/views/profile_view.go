@@ -188,7 +188,8 @@ func Projects(projects []service.Project) string {
 	projectsList := projectsBuilder.String()
 
 	projectsHeaderStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#e75fff"))
+		Foreground(lipgloss.Color("#FF5FAF")).
+		Bold(true)
 
 	projectsHeader := lipgloss.JoinHorizontal(
 		lipgloss.Left,
@@ -214,7 +215,7 @@ func Profile(p service.ProfileData, projectsVp viewport.Model) string {
 			Render("loading")
 	}
 
-	profileBox := lipgloss.NewStyle().
+	profileInformation := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderTop(false).
 		BorderBottom(false).
@@ -223,7 +224,7 @@ func Profile(p service.ProfileData, projectsVp viewport.Model) string {
 		Padding(0, 1).
 		Render(profile(p, 42))
 
-	projectsBox := lipgloss.NewStyle().
+	projectsList := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderTop(false).
 		BorderBottom(false).
@@ -232,11 +233,18 @@ func Profile(p service.ProfileData, projectsVp viewport.Model) string {
 		Padding(0, 1).
 		Render(projectsVp.View())
 
-	profileAndProjects := lipgloss.JoinHorizontal(
+	cursusStatus := lipgloss.JoinHorizontal(lipgloss.Left,
+		"milestone 0",
+	)
+
+	profileSection := lipgloss.JoinHorizontal(
 		lipgloss.Top,
-		profileBox,
+		lipgloss.JoinVertical(lipgloss.Top,
+			profileInformation,
+			cursusStatus,
+		),
 		" ",
-		projectsBox,
+		projectsList,
 	)
 
 	layout := lipgloss.NewStyle().
@@ -245,7 +253,7 @@ func Profile(p service.ProfileData, projectsVp viewport.Model) string {
 		Render(
 			lipgloss.JoinVertical(
 				lipgloss.Top,
-				profileAndProjects,
+				profileSection,
 				"New sections coming soon...",
 			),
 		)
