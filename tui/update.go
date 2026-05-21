@@ -12,10 +12,6 @@ import (
 	"42cli/tui/views"
 )
 
-// ==========================================
-// 1. DEFINICIÓN DE MENSAJES (MESSAGES)
-// ==========================================
-
 type AutologinMsg struct {
 	User string
 	Pass string

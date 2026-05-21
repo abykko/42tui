@@ -1,10 +1,12 @@
 package views
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"os"
 	"strings"
-	"crypto/sha256"
+	"time"
+
 	"golang.org/x/term"
 
 	"charm.land/bubbles/v2/viewport"
@@ -13,30 +15,29 @@ import (
 	"42cli/tui/service"
 )
 
+/* ----------------------------- PROFILE PICTURE ----------------------------- */
+
 func profilePicture(userID int) string {
-	// hash del usuario
 	h := sha256.Sum256([]byte(fmt.Sprintf("%d", userID)))
 	hash := h[:]
 
 	palette := []string{
-		"#5F5FAF", // azul violeta
-		"#FF5FAF", // rosa
-		"#7CFF6B", // verde
-		"#FFD166", // amarillo
-		"#06D6A0", // aqua
-		"#EF476F", // rojo suave
-		"#A78BFA", // violeta claro
+		"#5F5FAF",
+		"#FF5FAF",
+		"#7CFF6B",
+		"#FFD166",
+		"#06D6A0",
+		"#EF476F",
+		"#A78BFA",
 	}
 
-	width := 6
-	height := 6
+	const width = 6
+	const height = 6
 
 	var b strings.Builder
 
 	for i := 0; i < height; i++ {
 		for j := 0; j < width; j++ {
-
-			// usa el hash para elegir color determinista
 			idx := int(hash[(i*width+j)%len(hash)]) % len(palette)
 
 			style := lipgloss.NewStyle().
@@ -44,7 +45,7 @@ func profilePicture(userID int) string {
 
 			b.WriteString(style.Render("██"))
 		}
-		if i != height - 1 {
+		if i != height-1 {
 			b.WriteString("\n")
 		}
 	}
@@ -54,8 +55,9 @@ func profilePicture(userID int) string {
 		Render(b.String())
 }
 
-func profile(p service.ProfileData, maxSize int) string {
+/* -------------------------------- PROFILE -------------------------------- */
 
+func profile(p service.ProfileData, maxSize int) string {
 	nameStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#FF5FAF")).
 		Bold(true)
@@ -84,7 +86,7 @@ func profile(p service.ProfileData, maxSize int) string {
 				lipgloss.Top,
 				nameStyle.Render(fullName),
 				lipgloss.NewStyle().
-					Width(maxSize - len(fullName) - len(username)).
+					Width(maxSize-len(fullName)-len(username)).
 					Render(""),
 				usernameStyle.Render(username),
 			),
@@ -100,31 +102,27 @@ func profile(p service.ProfileData, maxSize int) string {
 		labelStyle.Render("};"),
 	)
 
-	// We pass the ID to generate a unique noise profile picture
 	avatar := profilePicture(p.ID)
 
-	content := lipgloss.JoinHorizontal(
+	return lipgloss.JoinHorizontal(
 		lipgloss.Top,
 		avatar,
 		" ",
 		info,
 	)
-
-	return content
 }
 
-func Projects(projects []service.Project) string {
+/* -------------------------------- PROJECTS -------------------------------- */
 
+func Projects(projects []service.Project) string {
 	const (
-		totalWidth = 30
 		nameWidth  = 15
 		scoreWidth = 5
 	)
 
-	var projectsBuilder strings.Builder
+	var sb strings.Builder
 
 	for i, p := range projects {
-
 		status := "✘"
 		statusColor := lipgloss.Color("#ff4848")
 		scoreColor := lipgloss.Color("#ff4848")
@@ -132,7 +130,7 @@ func Projects(projects []service.Project) string {
 
 		if p.IsValidated {
 			status = "✓"
-			statusColor = lipgloss.Color("#9cff67")
+			statusColor = lipgloss.Color("#2ecc71")
 			scoreColor = lipgloss.Color("#9cff67")
 		}
 
@@ -151,103 +149,138 @@ func Projects(projects []service.Project) string {
 		scoreStyle := lipgloss.NewStyle().Foreground(scoreColor)
 		statusStyle := lipgloss.NewStyle().Foreground(statusColor)
 
-		name := p.ProjectName
-		r := []rune(name)
-
-		if len(r) > nameWidth {
+		name := []rune(p.ProjectName)
+		if len(name) > nameWidth {
 			if nameWidth > 3 {
-				r = append(r[:nameWidth-3], []rune("...")...)
+				name = append(name[:nameWidth-3], []rune("...")...)
 			} else {
-				r = r[:nameWidth]
+				name = name[:nameWidth]
 			}
 		}
 
-		name = string(r)
-
-		namePart := nameStyle.Width(nameWidth).Render(name)
-
-		scorePart := scoreStyle.Width(scoreWidth).Render(
-			fmt.Sprintf("%d", int(p.FinalMark)),
-		)
-
+		namePart := nameStyle.Width(nameWidth).Render(string(name))
+		scorePart := scoreStyle.Width(scoreWidth).Render(fmt.Sprintf("%d", int(p.FinalMark)))
 		statusPart := statusStyle.Render(status)
 
-		line := lipgloss.JoinHorizontal(
-			lipgloss.Top,
-			namePart,
-			scorePart,
-			statusPart,
-		)
-
-		projectsBuilder.WriteString(line)
-		projectsBuilder.WriteByte('\n')
+		sb.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, namePart, scorePart, statusPart))
+		sb.WriteByte('\n')
 	}
 
-	projectsBuilder.WriteString("EOF")
+	sb.WriteString("EOF")
 
-	projectsList := projectsBuilder.String()
-
-	projectsHeaderStyle := lipgloss.NewStyle().
+	header := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#FF5FAF")).
-		Bold(true)
+		Bold(true).
+		Render("Submitted Projects ⛶")
 
-	projectsHeader := lipgloss.JoinHorizontal(
-		lipgloss.Left,
-		projectsHeaderStyle.Render("Submitted Projects ⛶"),
+	return lipgloss.JoinVertical(
+		lipgloss.Center,
+		header,
+		sb.String(),
 	)
-
-	content := lipgloss.JoinVertical(lipgloss.Center,
-		projectsHeader,
-		projectsList,
-	)
-
-	return content
 }
+
+/* ---------------------------------- PACE ---------------------------------- */
 
 func pace(p service.ProfileData) string {
 	currentMilestone := p.Pace.Milestone
+	currentPace := p.Pace.Pace
+	currentDeadline := p.Pace.Deadline
 
-	lastMilestoneValidated := p.Pace.Milestones[6].ValidatedAt
-	if lastMilestoneValidated != "" {
-		currentMilestone = 7
+	if len(p.Pace.Milestones) > 6 {
+		if p.Pace.Milestones[6].ValidatedAt != "" {
+			currentMilestone = 7
+		}
 	}
 
-	passedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#2ecc71")).Padding(0, 1)
-	currentStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("24")).Bold(true).Padding(0, 1)
-	pendingStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#7f8c8d")).Padding(0, 1)
+	daysUntil := func(deadlineStr string) int {
+		now := time.Now().UTC()
+		currentDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
 
-	// Usamos un builder para ir creando el string grande de forma eficiente
-	var milestonesBuilder strings.Builder
+		deadlineDate, err := time.Parse("2006-01-02", deadlineStr)
+		if err != nil {
+			return 0
+		}
+
+		return int(deadlineDate.Sub(currentDate).Hours() / 24)
+	}
+
+	paces := []int{8, 12, 15, 18, 22, 24}
+
+	nextPace := func(current int) (int, bool) {
+		for i, v := range paces {
+			if v == current {
+				if i+1 < len(paces) {
+					return paces[i+1], true
+				}
+				return 0, false
+			}
+		}
+		return 0, false
+	}
+
+	buildHeader := func() string {
+		next, ok := nextPace(currentPace)
+		days := daysUntil(currentDeadline)
+
+		if !ok {
+			return fmt.Sprintf("Pace %d | blackhole", currentPace)
+		}
+
+		return fmt.Sprintf(
+			"Pace %d | %d days left to Pace %d",
+			currentPace,
+			days,
+			next,
+		)
+	}
+
+	header := buildHeader()
+
+	passedStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#2ecc71")).
+		Padding(0, 1)
+
+	currentStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#3e7eff")).
+		Bold(true).
+		Padding(0, 1)
+
+	pendingStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#7f8c8d")).
+		Padding(0, 1)
+
+	var sb strings.Builder
 
 	for i := 0; i <= 6; i++ {
 		label := fmt.Sprintf("Milestone %d", i)
-		var renderedLine string
 
+		var line string
 		switch {
 		case i < currentMilestone:
-			renderedLine = passedStyle.Render("✔ " + label)
+			line = passedStyle.Render("✔ " + label)
 		case i == currentMilestone:
-			renderedLine = currentStyle.Render(label + " ◀")
+			line = currentStyle.Render(label + " ◀")
 		default:
-			renderedLine = pendingStyle.Render("○ " + label)
+			line = pendingStyle.Render("○ " + label)
 		}
 
-		// Si no es la primera línea, añadimos el salto de línea antes de la siguiente
 		if i > 0 {
-			milestonesBuilder.WriteString("\n")
+			sb.WriteByte('\n')
 		}
-		milestonesBuilder.WriteString(renderedLine)
+		sb.WriteString(line)
 	}
 
-	// Ahora JoinVertical recibe dos strings planos: el título y el bloque completo
-	return lipgloss.JoinVertical(lipgloss.Left,
-		"Cursus milestones",
-		milestonesBuilder.String(),
+	return lipgloss.JoinVertical(
+		lipgloss.Left,
+		header,
+		sb.String(),
 	)
 }
 
-func Profile(p service.ProfileData, projectsVp viewport.Model) string {
+/* --------------------------------- PROFILE -------------------------------- */
 
+func Profile(p service.ProfileData, projectsVp viewport.Model) string {
 	w, _, _ := term.GetSize(int(os.Stdout.Fd()))
 
 	if p.ID == 0 {
@@ -276,7 +309,8 @@ func Profile(p service.ProfileData, projectsVp viewport.Model) string {
 
 	profileSection := lipgloss.JoinHorizontal(
 		lipgloss.Top,
-		lipgloss.JoinVertical(lipgloss.Top,
+		lipgloss.JoinVertical(
+			lipgloss.Top,
 			profileInformation,
 			cursusStatus,
 		),
@@ -284,7 +318,7 @@ func Profile(p service.ProfileData, projectsVp viewport.Model) string {
 		projectsList,
 	)
 
-	layout := lipgloss.NewStyle().
+	return lipgloss.NewStyle().
 		Width(w).
 		AlignHorizontal(lipgloss.Center).
 		Render(
@@ -294,6 +328,4 @@ func Profile(p service.ProfileData, projectsVp viewport.Model) string {
 				"New sections coming soon...",
 			),
 		)
-
-	return layout
 }
