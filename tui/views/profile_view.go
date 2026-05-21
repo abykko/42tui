@@ -3,6 +3,7 @@ package views
 import (
 	"crypto/sha256"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"time"
@@ -15,20 +16,14 @@ import (
 	"42cli/tui/service"
 )
 
-/* ----------------------------- PROFILE PICTURE ----------------------------- */
-
+// profilePicture generates a deterministic 6x6 pixel avatar based on the user's ID hash.
 func profilePicture(userID int) string {
 	h := sha256.Sum256([]byte(fmt.Sprintf("%d", userID)))
 	hash := h[:]
 
 	palette := []string{
-		"#5F5FAF",
-		"#FF5FAF",
-		"#7CFF6B",
-		"#FFD166",
-		"#06D6A0",
-		"#EF476F",
-		"#A78BFA",
+		"#5F5FAF", "#FF5FAF", "#7CFF6B", "#FFD166",
+		"#06D6A0", "#EF476F", "#A78BFA",
 	}
 
 	const width = 6
@@ -39,10 +34,7 @@ func profilePicture(userID int) string {
 	for i := 0; i < height; i++ {
 		for j := 0; j < width; j++ {
 			idx := int(hash[(i*width+j)%len(hash)]) % len(palette)
-
-			style := lipgloss.NewStyle().
-				Foreground(lipgloss.Color(palette[idx]))
-
+			style := lipgloss.NewStyle().Foreground(lipgloss.Color(palette[idx]))
 			b.WriteString(style.Render("██"))
 		}
 		if i != height-1 {
@@ -50,26 +42,15 @@ func profilePicture(userID int) string {
 		}
 	}
 
-	return lipgloss.NewStyle().
-		Padding(0, 1).
-		Render(b.String())
+	return lipgloss.NewStyle().Padding(0, 1).Render(b.String())
 }
 
-/* -------------------------------- PROFILE -------------------------------- */
-
+// profile layouts the top profile info snippet (Name, Username, Email, Location).
 func profile(p service.ProfileData, maxSize int) string {
-	nameStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#FF5FAF")).
-		Bold(true)
-
-	usernameStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#615c65"))
-
-	labelStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#6f6f6f"))
-
-	valueStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#D0D0D0"))
+	nameStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FF5FAF")).Bold(true)
+	usernameStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#615c65"))
+	labelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#6f6f6f"))
+	valueStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#D0D0D0"))
 
 	fullName := fmt.Sprintf("%s %s", p.FirstName, p.LastName)
 	username := "@" + p.Login
@@ -85,9 +66,7 @@ func profile(p service.ProfileData, maxSize int) string {
 			lipgloss.JoinHorizontal(
 				lipgloss.Top,
 				nameStyle.Render(fullName),
-				lipgloss.NewStyle().
-					Width(maxSize-len(fullName)-len(username)).
-					Render(""),
+				lipgloss.NewStyle().Width(maxSize-len(fullName)-len(username)).Render(""),
 				usernameStyle.Render(username),
 			),
 		)
@@ -104,16 +83,10 @@ func profile(p service.ProfileData, maxSize int) string {
 
 	avatar := profilePicture(p.ID)
 
-	return lipgloss.JoinHorizontal(
-		lipgloss.Top,
-		avatar,
-		" ",
-		info,
-	)
+	return lipgloss.JoinHorizontal(lipgloss.Top, avatar, " ", info)
 }
 
-/* -------------------------------- PROJECTS -------------------------------- */
-
+// Projects renders the vertical table component of submitted academic projects.
 func Projects(projects []service.Project) string {
 	const (
 		nameWidth  = 15
@@ -134,6 +107,7 @@ func Projects(projects []service.Project) string {
 			scoreColor = lipgloss.Color("#9cff67")
 		}
 
+		// Zebra striping color rotation for project list
 		switch i % 4 {
 		case 0:
 			nameColor = lipgloss.Color("#F7CAD0")
@@ -163,46 +137,80 @@ func Projects(projects []service.Project) string {
 		statusPart := statusStyle.Render(status)
 
 		sb.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, namePart, scorePart, statusPart))
-		sb.WriteByte('\n')
+		if i < len(projects)-1 {
+			sb.WriteByte('\n')
+		}
 	}
-
-	sb.WriteString("EOF")
 
 	header := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#FF5FAF")).
 		Bold(true).
 		Render("Submitted Projects ⛶")
 
-	return lipgloss.JoinVertical(
-		lipgloss.Center,
-		header,
-		sb.String(),
-	)
+	return lipgloss.JoinVertical(lipgloss.Center, header, sb.String())
 }
 
-/* ---------------------------------- PACE ---------------------------------- */
-
+// pace tracks curriculum velocity and milestones deadlines.
 func pace(p service.ProfileData) string {
-	currentMilestone := p.Pace.Milestone
-	currentPace := p.Pace.Pace
-	currentDeadline := p.Pace.Deadline
 
-	if len(p.Pace.Milestones) > 6 {
-		if p.Pace.Milestones[6].ValidatedAt != "" {
-			currentMilestone = 7
+	// daysBetween calculates day difference between two strings ("YYYY-MM-DD" or "now").
+	daysBetween := func(startStr, endStr string) int {
+		const layout = "2006-01-02"
+		var startDate time.Time
+		var err error
+
+		if startStr == "now" {
+			now := time.Now().UTC()
+			startDate = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+		} else {
+			// Trim full ISO8601 timestamps to basic date length to avoid parsing errors
+			if len(startStr) > 10 {
+				startStr = startStr[:10]
+			}
+			startDate, err = time.Parse(layout, startStr)
+			if err != nil {
+				return 0
+			}
 		}
-	}
 
-	daysUntil := func(deadlineStr string) int {
-		now := time.Now().UTC()
-		currentDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
-
-		deadlineDate, err := time.Parse("2006-01-02", deadlineStr)
+		if len(endStr) > 10 {
+			endStr = endStr[:10]
+		}
+		endDate, err := time.Parse(layout, endStr)
 		if err != nil {
 			return 0
 		}
 
-		return int(deadlineDate.Sub(currentDate).Hours() / 24)
+		return int(endDate.Sub(startDate).Hours() / 24)
+	}
+
+	currentPace := p.Pace.Pace
+	cursusBeginDate := p.Pace.CursusBeginDate
+	currentMilestone := p.Pace.Milestone
+	currentDeadline := p.Pace.Deadline
+
+	currentMilestoneStartingDate := cursusBeginDate
+
+	if currentMilestone > 0 {
+		for _, m := range p.Pace.Milestones {
+			if m.Level == currentMilestone-1 && m.ValidatedAt != "" {
+				currentMilestoneStartingDate = m.ValidatedAt[:10]
+				break
+			}
+		}
+	}
+
+	currentPaceTotalDays := daysBetween(currentMilestoneStartingDate, currentDeadline)
+	currentPaceLeftDays := daysBetween("now", currentDeadline)
+
+	// Map milestones by their functional levels to protect against unstructured or unordered API payloads
+	milestoneMap := make(map[int]service.Milestone)
+	for _, m := range p.Pace.Milestones {
+		milestoneMap[m.Level] = m
+	}
+
+	if m6, exists := milestoneMap[6]; exists && m6.ValidatedAt != "" {
+		currentMilestone = 7 // Status code indicating curriculum completion
 	}
 
 	paces := []int{8, 12, 15, 18, 22, 24}
@@ -221,66 +229,134 @@ func pace(p service.ProfileData) string {
 
 	buildHeader := func() string {
 		next, ok := nextPace(currentPace)
-		days := daysUntil(currentDeadline)
-
 		if !ok {
 			return fmt.Sprintf("Pace %d | blackhole", currentPace)
 		}
 
-		return fmt.Sprintf(
-			"Pace %d | %d days left to Pace %d",
-			currentPace,
-			days,
-			next,
+		daysLeft := currentPaceLeftDays
+		totalDays := currentPaceTotalDays
+		daysPassed := totalDays - daysLeft
+
+		if totalDays <= 0 {
+			totalDays = 1
+		}
+
+		barWidth := 24
+		ratio := float64(daysPassed) / float64(totalDays)
+
+		if ratio < 0 {
+			ratio = 0
+		} else if ratio > 1 {
+			ratio = 1
+		}
+
+		progressColor := lipgloss.Color("#ff00bf")
+		switch {
+		case ratio < 0.60: // Green (Safe progress zone)
+			progressColor = lipgloss.Color("#2ecc71")
+		case ratio < 0.85: // Orange (Warning zone)
+			progressColor = lipgloss.Color("#f39c12")
+		default: // Red (Critical deadline risk)
+			progressColor = lipgloss.Color("#e74c3c")
+		}
+
+		filledBlocks := int(ratio * float64(barWidth))
+		emptyBlocks := barWidth - filledBlocks
+
+		filledStr := strings.Repeat("█", filledBlocks)
+		emptyStr := strings.Repeat("░", emptyBlocks)
+
+		progressStyle := lipgloss.NewStyle().Foreground(progressColor).Render(filledStr)
+		bgStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#7f8c8d")).Render(emptyStr)
+		daysLeftStyle := lipgloss.NewStyle().Foreground(progressColor).Bold(true).Render(fmt.Sprintf("%2d", daysLeft))
+
+		content := lipgloss.JoinVertical(lipgloss.Center,
+			fmt.Sprintf("Pace %d [%s%s] Pace %d", currentPace, progressStyle, bgStyle, next),
+			fmt.Sprintf("%s days left", daysLeftStyle),
 		)
+
+		return content
 	}
 
-	header := buildHeader()
+	passedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#2ecc71")).Padding(0, 1)
+	currentStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#3e7eff")).Bold(true).Padding(0, 1)
+	pendingStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#7f8c8d")).Padding(0, 1)
+	dateStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#bdc3c7")).Padding(0, 2)
+	durationStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#95a5a6")).Padding(0, 2)
 
-	passedStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#2ecc71")).
-		Padding(0, 1)
-
-	currentStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#3e7eff")).
-		Bold(true).
-		Padding(0, 1)
-
-	pendingStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#7f8c8d")).
-		Padding(0, 1)
-
-	var sb strings.Builder
+	var milestones strings.Builder
+	var validatedDates strings.Builder
+	var durations strings.Builder
 
 	for i := 0; i <= 6; i++ {
 		label := fmt.Sprintf("Milestone %d", i)
+		var dateLabel string
+		var durationLabel string
+
+		if m, exists := milestoneMap[i]; exists && m.ValidatedAt != "" {
+			dateLabel = m.ValidatedAt
+			if len(dateLabel) > 10 {
+				dateLabel = dateLabel[:10]
+			}
+
+			var daysTaken int
+			if i == 0 {
+				// Milestone 0 references curriculum initialization date
+				daysTaken = daysBetween(cursusBeginDate, dateLabel)
+			} else {
+				// Successive milestones are relative to the previous milestone's completion date
+				if prevM, prevExists := milestoneMap[i-1]; prevExists && prevM.ValidatedAt != "" {
+					daysTaken = daysBetween(prevM.ValidatedAt, dateLabel)
+				}
+			}
+			durationLabel = fmt.Sprintf("(%d days)", daysTaken)
+		} else {
+			dateLabel = "-"
+			durationLabel = ""
+		}
 
 		var line string
+		var dateLine string
+		var durationLine string
+
 		switch {
 		case i < currentMilestone:
 			line = passedStyle.Render("✔ " + label)
+			dateLine = dateStyle.Render(dateLabel)
+			durationLine = durationStyle.Render(durationLabel)
 		case i == currentMilestone:
 			line = currentStyle.Render(label + " ◀")
+			dateLine = currentStyle.Render(dateLabel)
+			durationLine = durationStyle.Render(durationLabel)
 		default:
 			line = pendingStyle.Render("○ " + label)
+			dateLine = pendingStyle.Render(dateLabel)
+			durationLine = pendingStyle.Render(durationLabel)
 		}
 
 		if i > 0 {
-			sb.WriteByte('\n')
+			milestones.WriteByte('\n')
+			validatedDates.WriteByte('\n')
+			durations.WriteByte('\n')
 		}
-		sb.WriteString(line)
+		milestones.WriteString(line)
+		validatedDates.WriteString(dateLine)
+		durations.WriteString(durationLine)
 	}
 
-	return lipgloss.JoinVertical(
-		lipgloss.Left,
-		header,
-		sb.String(),
+	columns := lipgloss.JoinHorizontal(lipgloss.Top,
+		milestones.String(),
+		validatedDates.String(),
+		durations.String(),
 	)
+
+	return lipgloss.JoinVertical(lipgloss.Left, buildHeader(), columns)
 }
 
-/* --------------------------------- PROFILE -------------------------------- */
-
+// Profile aggregates and outputs the root layout structure for the user terminal dashboard viewport.
 func Profile(p service.ProfileData, projectsVp viewport.Model) string {
+	log.Println("[ProfileView] Rendering", p.Login)
+
 	w, _, _ := term.GetSize(int(os.Stdout.Fd()))
 
 	if p.ID == 0 {
@@ -299,13 +375,8 @@ func Profile(p service.ProfileData, projectsVp viewport.Model) string {
 		Padding(0, 1).
 		Render(profile(p, 40))
 
-	projectsList := lipgloss.NewStyle().
-		Padding(0, 1).
-		Render(projectsVp.View())
-
-	cursusStatus := lipgloss.NewStyle().
-		Padding(2, 1).
-		Render(pace(p))
+	projectsList := lipgloss.NewStyle().Padding(0, 1).Render(projectsVp.View())
+	cursusStatus := lipgloss.NewStyle().Padding(2, 1).Render(pace(p))
 
 	profileSection := lipgloss.JoinHorizontal(
 		lipgloss.Top,
