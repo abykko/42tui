@@ -241,7 +241,7 @@ func pace(p service.ProfileData) string {
 
 	// Ahora JoinVertical recibe dos strings planos: el título y el bloque completo
 	return lipgloss.JoinVertical(lipgloss.Left,
-		"Cursus progress",
+		"Cursus milestones",
 		milestonesBuilder.String(),
 	)
 }

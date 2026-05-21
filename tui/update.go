@@ -7,10 +7,14 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"42cli/conf"
+	deployment "42cli/server-deployment"
 	"42cli/tui/service"
 	"42cli/tui/views"
-	deployment "42cli/server-deployment"
 )
+
+// ==========================================
+// 1. DEFINICIÓN DE MENSAJES (MESSAGES)
+// ==========================================
 
 type AutologinMsg struct {
 	User string
@@ -25,6 +29,48 @@ type ProfileMsg struct {
 
 type ClockUpdate struct{}
 
+// Async responses to avoid UI freezing
+type StartupResultMsg struct {
+	Ok  bool
+	Err error
+}
+
+type LoginResultMsg struct {
+	Ok   bool
+	User string
+	Pass string
+	Err  error
+}
+
+type ProfileResultMsg struct {
+	Profile service.ProfileData
+	Err     error
+}
+
+// Async commands
+
+func startupCmd() tea.Cmd {
+	return func() tea.Msg {
+		ok, err := service.Startup()
+		return StartupResultMsg{Ok: ok, Err: err}
+	}
+}
+
+func loginCmd(user, pass string) tea.Cmd {
+	return func() tea.Msg {
+		ok, err := service.Login(user, pass)
+		return LoginResultMsg{Ok: ok, User: user, Pass: pass, Err: err}
+	}
+}
+
+func fetchProfileCmd(user string) tea.Cmd {
+	return func() tea.Msg {
+		prof, err := service.Profile(user)
+		return ProfileResultMsg{Profile: prof, Err: err}
+	}
+}
+
+// Helper function
 func getDateTime() (string, string) {
 	now := time.Now()
 	day := now.Format("02 Jan")
@@ -34,14 +80,15 @@ func getDateTime() (string, string) {
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
-	// Initialize the clock 
+	// Inicializar el reloj si está vacío
 	if m.Clock.Time == "" {
 		m.Clock.Day, m.Clock.Time = getDateTime()
-		return m, func() tea.Msg { return ClockUpdate{} } 
+		return m, func() tea.Msg { return ClockUpdate{} }
 	}
 
 	var cmds []tea.Cmd
 
+	// Actualizar los componentes internos (Viewport)
 	var vpCmd tea.Cmd
 	m.ProjectsViewport, vpCmd = m.ProjectsViewport.Update(msg)
 	cmds = append(cmds, vpCmd)
@@ -62,7 +109,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return ProfileMsg{User: "msouiyeh"}
 			}
 		}
-		if msg.String() == "a" {
+		if msg.String() == "b" {
 			return m, func() tea.Msg {
 				return ProfileMsg{User: "iamrani-"}
 			}
@@ -71,23 +118,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ClockUpdate:
 		m.Clock.Day, m.Clock.Time = getDateTime()
 
-		// keep ticking
+		// Mantener el reloj tickeando de forma asíncrona
 		cmds = append(cmds, func() tea.Msg {
 			time.Sleep(1 * time.Second)
 			return ClockUpdate{}
 		})
 
 	case AutologinMsg:
+		m.Page = "autologin" // Estado visual de carga
+		// Disparamos la petición de login en segundo plano
+		return m, loginCmd(msg.User, msg.Pass)
 
-		m.Page = "autologin"
-
-		ok, err := service.Login(msg.User, msg.Pass)
-		if err != nil {
-			log.Println("[Autologin] error:", err)
+	case LoginResultMsg:
+		// Procesamos el resultado del login cuando el servidor responde
+		if msg.Err != nil {
+			log.Println("[Autologin] error:", msg.Err)
 			return m, tea.Quit
 		}
 
-		if !ok {
+		if !msg.Ok {
 			return m, func() tea.Msg { return LoginMsg{} }
 		}
 
@@ -99,32 +148,28 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.Page = "login"
 
 	case ProfileMsg:
-		m.Page = "profile"
+		m.Page = "profile" // Estado visual de carga de perfil
+		// Disparamos la petición del perfil en segundo plano sin congelar la app
+		return m, fetchProfileCmd(msg.User)
 
-		var err error
-		m.Profile, err = service.Profile(msg.User)
-		if err != nil {
-			log.Println("[Profile] error:", err)
+	case ProfileResultMsg:
+		// Procesamos los datos del perfil una vez recibidos
+		if msg.Err != nil {
+			log.Println("[Profile] error:", msg.Err)
 			return m, tea.Quit
 		}
 
+		m.Profile = msg.Profile
 		m.ProjectsViewport.SetContent(views.Projects(m.Profile.Projects))
 
-	case tea.WindowSizeMsg:
-		// m.ProjectsViewport.Width = msg.Width
-		// m.ProjectsViewport.Height = msg.Height
-	}
-
-	if m.Page == "startup" {
-		m.Page = ""
-
-		ok, err := service.Startup()
-		if err != nil {
+	case StartupResultMsg:
+		// Procesamos el resultado del Startup que se lanzó al inicio
+		if msg.Err != nil {
 			deployment.Stop()
 			return m, tea.Quit
 		}
 
-		if ok {
+		if msg.Ok {
 			autoLogin, err := conf.GetBool("autologin")
 			if err != nil {
 				log.Println("[Startup] autologin config error:", err)
@@ -144,6 +189,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		}
+
+	case tea.WindowSizeMsg:
+		// m.ProjectsViewport.Width = msg.Width
+		// m.ProjectsViewport.Height = msg.Height
+	}
+
+	// Lógica de Startup delegada a un comando asíncrono
+	if m.Page == "startup" {
+		m.Page = "loading_startup" // Cambiamos el estado temporalmente para no repetir este IF
+		return m, startupCmd()
 	}
 
 	return m, tea.Batch(cmds...)
