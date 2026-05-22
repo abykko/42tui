@@ -78,7 +78,7 @@ func profile(p service.ProfileData, maxSize int) string {
 		"",
 		"",
 		fmt.Sprintf(
-			"%s %s\t%s %s\t%s %s",
+			"%s %s\t%s %s",
 			labelStyle.Render("Ev.P:"),
 			valueStyle.Render(fmt.Sprintf("%d",p.EvaluationPoints)),
 			labelStyle.Render("Wallet:"),
@@ -339,7 +339,7 @@ func pace(p service.ProfileData) string {
 		if m, exists := milestoneMap[i]; exists {
 
 			if i == currentMilestone {
-				dateLabel = "\tCurrent"
+				dateLabel = "\t  Current"
 			} else {
 				dateLabel = m.ValidatedAt
 				if len(dateLabel) > 10 {
@@ -389,8 +389,8 @@ func pace(p service.ProfileData) string {
 
 		default:
 			line = pendingStyle.Render("○ " + label)
-			dateLine = pendingStyle.Render(dateLabel)
-			durationLine = "\t\t---"
+			dateLine = dateLabel
+			durationLine = "\t\t\t---"
 		}
 
 		if i > 0 {
