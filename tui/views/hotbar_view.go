@@ -11,6 +11,7 @@ import (
 	"42cli/conf"
 )
 
+// Hotbar renders a single-line, 3-column top status bar matching the terminal width.
 func Hotbar(day string, time string) string {
 	w, _, _ := term.GetSize(int(os.Stdout.Fd()))
 
@@ -27,34 +28,21 @@ func Hotbar(day string, time string) string {
 		BorderRight(false).
 		Width(w)
 
-	// Línea 1
-	h1Left := "Intranet"
-	h1Center := day
-	h1Right := "42cli"
+	// Subdivide terminal width dynamically into three chunks.
+	// The right column takes the remaining balance to absorb integer division losses.
+	colWidth := w / 3
+	rightColWidth := w - (colWidth * 2)
 
-	h1 := lipgloss.JoinHorizontal(
+	// Combine data into a single-line format for each column
+	leftContent := fmt.Sprintf("Intranet (%s)", loggedUser)
+	centerContent := fmt.Sprintf("%s %s", day, time)
+	rightContent := "42cli v1.0.0"
+
+	content := lipgloss.JoinHorizontal(
 		lipgloss.Top,
-		lipgloss.PlaceHorizontal(w/3, lipgloss.Left, h1Left),
-		lipgloss.PlaceHorizontal(w/3, lipgloss.Center, h1Center),
-		lipgloss.PlaceHorizontal(w/3, lipgloss.Right, h1Right),
-	)
-
-	// Línea 2
-	h2Left := fmt.Sprintf("Welcome %s", loggedUser)
-	h2Center := time
-	h2Right := "v1.0.0"
-
-	h2 := lipgloss.JoinHorizontal(
-		lipgloss.Top,
-		lipgloss.PlaceHorizontal(w/3, lipgloss.Left, h2Left),
-		lipgloss.PlaceHorizontal(w/3, lipgloss.Center, h2Center),
-		lipgloss.PlaceHorizontal(w/3, lipgloss.Right, h2Right),
-	)
-
-	content := lipgloss.JoinVertical(
-		lipgloss.Left,
-		h1,
-		h2,
+		lipgloss.PlaceHorizontal(colWidth, lipgloss.Left, leftContent),
+		lipgloss.PlaceHorizontal(colWidth, lipgloss.Center, centerContent),
+		lipgloss.PlaceHorizontal(rightColWidth, lipgloss.Right, rightContent),
 	)
 
 	return style.Render(content)

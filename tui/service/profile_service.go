@@ -14,7 +14,7 @@ type Milestone struct {
 	Level       int     `json:"level"`
 	MilestoneID int     `json:"milestone_id"`
 	UserID      int     `json:"user_id"`
-	ValidatedAt string `json:"validated_at"` // Puntero por si llega null
+	ValidatedAt string `json:"validated_at"`
 }
 
 type Pace struct {
@@ -28,7 +28,7 @@ type Pace struct {
 	Milestone              int         `json:"milestone"`
 	Milestones             []Milestone `json:"milestones"`
 	Pace                   int         `json:"pace"`
-	PaceSpeedUp            *int        `json:"pace_speed_up"` // Puntero por si llega null
+	PaceSpeedUp            *int        `json:"pace_speed_up"`
 	ProbationaryPeriod     bool        `json:"probationary_period"`
 }
 
@@ -47,8 +47,8 @@ type Project struct {
 	Occurrence     int    `json:"occurrence"`
 	ProjectName    string `json:"project_name"`
 	ProjectSlug    string `json:"project_slug"`
-	ProjectsUserID int    `json:"projects_user_id"` // Cambiado de any a int según tu JSON
-	Teams          []Team `json:"teams"`             // Añadido para procesar el array de equipos
+	ProjectsUserID int    `json:"projects_user_id"`
+	Teams          []Team `json:"teams"`
 }
 
 type ProfileData struct {
@@ -72,12 +72,11 @@ type ProfileData struct {
 	Groups           []any   `json:"groups"`
 	Titles           []any   `json:"titles"`
 	Projects         []Project `json:"projects"`
-	Pace             Pace    `json:"pace"`     // Vinculado correctamente
+	Pace             Pace    `json:"pace"`
 	Language         string  `json:"language"`
 }
 
 func parseProfile(resp map[string]interface{}, userLogged string) (ProfileData, error) {
-	log.Printf("[ProfileService] Parsing profile data for user: %s", userLogged)
 
 	// Most of the profile page data
 	key := "profile"
@@ -101,7 +100,6 @@ func parseProfile(resp map[string]interface{}, userLogged string) (ProfileData, 
 	}
 	log.Println("[ProfileService] Base profile data successfully parsed")
 
-	// Parsear el campo "pace" de la respuesta raíz
 	rawPace, ok := resp["pace"]
 	if ok {
 		log.Println("[ProfileService] Pace data found, attempting to parse...")

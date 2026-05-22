@@ -59,7 +59,7 @@ func InitialModel() Model {
 
 	// Projects viewport
 	vp := viewport.New(
-		viewport.WithWidth(30),
+		viewport.WithWidth(31),
 		viewport.WithHeight(16),
 	)
 

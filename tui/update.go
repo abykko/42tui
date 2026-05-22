@@ -76,7 +76,7 @@ func getDateTime() (string, string) {
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
-	// Inicializar el reloj si está vacío
+	// Init clock
 	if m.Clock.Time == "" {
 		m.Clock.Day, m.Clock.Time = getDateTime()
 		return m, func() tea.Msg { return ClockUpdate{} }
@@ -84,7 +84,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	var cmds []tea.Cmd
 
-	// Actualizar los componentes internos (Viewport)
+	// Update viewport
 	var vpCmd tea.Cmd
 	m.ProjectsViewport, vpCmd = m.ProjectsViewport.Update(msg)
 	cmds = append(cmds, vpCmd)
@@ -110,6 +110,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return ProfileMsg{User: "iamrani-"}
 			}
 		}
+		if msg.String() == "p" {
+			return m, func() tea.Msg {
+				return ProfileMsg{User: "alegalve"}
+			}
+		}
 
 	case ClockUpdate:
 		m.Clock.Day, m.Clock.Time = getDateTime()
@@ -121,7 +126,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		})
 
 	case AutologinMsg:
-		m.Page = "autologin" // Estado visual de carga
+		m.Page = "autologin"
 		// Disparamos la petición de login en segundo plano
 		return m, loginCmd(msg.User, msg.Pass)
 
