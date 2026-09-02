@@ -24,7 +24,7 @@ type Model struct {
 	Dump				io.Writer				// Tmp debug
 	Login  				LoginForm				// Login UI
 	
-	Profile 			service.ProfileData	// Hold information to render profile
+	Profile 			service.ProfileData		// Hold information to render profile
 	ProfileLastUpdate 	int64					// Track last time profile was updated
 	
 	Page    			string					// Current page (ui flow)

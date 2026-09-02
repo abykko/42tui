@@ -433,7 +433,7 @@ func Profile(p service.ProfileData, projectsVp viewport.Model) string {
 		return lipgloss.NewStyle().
 			Width(w).
 			AlignHorizontal(lipgloss.Center).
-			Render("You won't be able to access intranet's resources because of the following reason : Cursus freezed ")
+			Render(freezeMessage)
 	}
 
 	profileInformation := lipgloss.NewStyle().

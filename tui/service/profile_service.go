@@ -199,8 +199,6 @@ func isFreeze() (bool, error) {
 		return false, fmt.Errorf("invalid type for freeze")
 	}
 
-	log.Printf("freeze: %t", freeze)
-
 	return freeze, nil
 }
 
