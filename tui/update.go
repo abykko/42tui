@@ -110,11 +110,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return ProfileMsg{User: "iamrani-"}
 			}
 		}
-		if msg.String() == "p" {
-			return m, func() tea.Msg {
-				return ProfileMsg{User: "alegalve"}
-			}
-		}
 
 	case ClockUpdate:
 		m.Clock.Day, m.Clock.Time = getDateTime()
@@ -154,8 +149,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, fetchProfileCmd(msg.User)
 
 	case ProfileResultMsg:
-		// Procesamos los datos del perfil una vez recibidos
 		if msg.Err != nil {
+			if msg.Err.Error() == "freeze" {
+				log.Println("[Profile] User is currently frozen.")
+				m.Profile.ID = -1
+				break
+			}
+
 			log.Println("[Profile] error:", msg.Err)
 			return m, tea.Quit
 		}

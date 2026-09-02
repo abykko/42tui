@@ -184,7 +184,37 @@ func fetchProfile(user string) (ProfileData, error) {
 	return parseProfile(resp, user)
 }
 
+func isFreeze() (bool, error) {
+	endpoint := "/freeze"
+	log.Printf("[ProfileService] Making API request to endpoint: %s", endpoint)
+
+	resp, _, err := api.DoRequest(endpoint)
+	if err != nil {
+		log.Printf("[ProfileService] API request failed for endpoint %s: %v", endpoint, err)
+		return false, err
+	}
+
+	freeze, ok := resp["freeze"].(bool)
+	if !ok {
+		return false, fmt.Errorf("invalid type for freeze")
+	}
+
+	log.Printf("freeze: %t", freeze)
+
+	return freeze, nil
+}
+
 func Profile(user string) (ProfileData, error) {
 	log.Printf("[ProfileService] External call to Profile() invoked for user: '%s'", user)
+
+	freeze, err := isFreeze()
+	if err != nil {
+		return ProfileData{}, err
+	}
+
+	if freeze {
+		return ProfileData{}, fmt.Errorf("freeze")
+	}
+
 	return fetchProfile(user)
 }
