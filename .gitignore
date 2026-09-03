@@ -1,2 +1,5 @@
 session.json
 __pycache__
+api_logs.json
+debug.log
+messages.log

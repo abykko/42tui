@@ -1,31 +1,33 @@
 from playwright.sync_api import sync_playwright
+from app.config import SESSION_FILE, PROFILE_URL, AUTH_URL
 import json
 import os
-
-SESSION_FILE = "security/session.json"
 
 def authenticate():
     try:
         with open(SESSION_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
+            f.close()
         return data
     except Exception as e:
         return None
-    
+
+
 def is_expired():
 
     if not os.path.exists(SESSION_FILE): return True
 
     def task(page, context):
         try:
-            page.goto("https://profile-v3.intra.42.fr/")
-            page.wait_for_url("https://auth.42.fr/**", timeout=3000)
+            page.goto(PROFILE_URL)
+            page.wait_for_url(AUTH_URL, timeout=3000)
             return True
         except Exception:
             # If we reach the wait_for_url timeout
             return False
     
     return run_playwright(task)
+
 
 def run_playwright(
     task,
