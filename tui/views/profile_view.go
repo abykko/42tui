@@ -12,7 +12,7 @@ import (
 	"charm.land/bubbles/v2/viewport"
 	"charm.land/lipgloss/v2"
 
-	"42cli/tui/service"
+	"42tui/tui/service"
 )
 
 // profilePicture generates a deterministic 6x6 pixel avatar based on the user's ID hash.

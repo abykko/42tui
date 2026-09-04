@@ -4,10 +4,11 @@ import (
     "crypto/rand"
     "encoding/hex"
     "log"
+    "fmt"
     "os"
     "os/exec"
 
-    "42cli/conf"
+    "42tui/conf"
 )
 
 func generateSecret() string {
@@ -22,47 +23,74 @@ func generateSecret() string {
 }
 
 func Build() error {
+    
+    /*
+        En caso de haber una instancia previa (no debería ocurrir)
+    */
+    StopByImage()
 
+    /*
+        Genera una clave que se usa para validar las
+        peticiones al contenedor del servidor.
+
+        La clave se almacena en una variable de entorno
+        correspondiente a la ejecución del programa.
+    */
     secret := generateSecret()
-    log.Println("[build] generated secret")
 
     secretEnv, err := conf.GetString("secret_env_var_name")
     if err != nil {
-        log.Println("[build] error getting secret env name:", err)
+        log.Println("[Build] error getting secret env name:", err)
         return err
     }
 
     if err := os.Setenv(secretEnv, secret); err != nil {
-        log.Println("[build] error setting SECRET env var:", err)
+        log.Println("[Build] error setting secret env var:", err)
         return err
     }
-    log.Printf("[build] set env var %s\n", secret)
 
+    log.Println("[Build] secret generated")
+
+    /*
+        Montamos el contenedor del servidor
+    */
     servDir, err := conf.GetString("server_dir")
     if err != nil {
-        log.Println("[build] error getting server_dir:", err)
+        log.Println("[Build] error getting server_dir:", err)
         return err
     }
+
+    port, err := conf.GetInt("server_port")
+	if err != nil {
+		return fmt.Errorf("getting server_port: %w", err)
+	}
 
     imageName, err := conf.GetString("podman_image_name")
     if err != nil {
-        log.Println("[build] error getting podman_image_name:", err)
+        log.Println("[Build] error getting podman_image_name:", err)
         return err
     }
 
-    log.Printf("[build] building podman image %s in %s\n", imageName, servDir)
+    log.Printf("[Build] building podman image %s from %s\n", imageName, servDir)
 
-    StopByImage()
+    buildCmd := exec.Command(
+        "podman", "build",
+        "--rm",
+        "--build-arg", fmt.Sprintf("PORT=%d", port),
+        "-t", imageName, ".",
+    )
+    buildCmd.Dir = servDir
+    buildCmd.Stdout = log.Writer()
+	buildCmd.Stderr = log.Writer()
 
-    cmd := exec.Command("podman", "build", "-t", imageName, ".")
-    cmd.Dir = servDir
+    log.Println("=== Building process ===")
 
-    if err := cmd.Run(); err != nil {
-        log.Println("[build] error building podman image:", err)
+    if err := buildCmd.Run(); err != nil {
+        log.Println("[Build] error building podman image:", err)
         return err
     }
 
-    log.Println("[build] podman build completed successfully")
+    log.Println("[Build] podman build completed successfully")
 
     return nil
 }

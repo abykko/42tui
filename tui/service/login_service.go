@@ -3,8 +3,8 @@ package service
 import (
     "fmt"
 
-    "42cli/api"
-    "42cli/conf"
+    "42tui/api"
+    "42tui/conf"
 )
 
 func Login(user, passwd string) (bool, error) {

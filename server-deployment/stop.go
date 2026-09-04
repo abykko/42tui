@@ -5,7 +5,7 @@ import (
 	"os"
 	"os/exec"
 
-	"42cli/conf"
+	"42tui/conf"
 )
 
 func StopByImage() error {

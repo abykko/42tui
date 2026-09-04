@@ -5,23 +5,65 @@ import (
 	"log"
 	"os"
 	"os/exec"
-
-	"42cli/tui"
+	"strings"
+	
+	"42tui/tui"
+	"42tui/conf"
 )
 
-// checkCommand verifica si una herramienta existe en el PATH del sistema
+/*
+	Verifica la existencia de una utilidad dada
+	por su nombre.
+*/
 func checkCommand(cmd string) bool {
 	_, err := exec.LookPath(cmd)
 	return err == nil
 }
 
-// checkFile verifica si un archivo existe
+/*
+	Verifica la integridad de un archivo dado
+	por su nombre.
+*/
 func checkFile(filename string) bool {
 	_, err := os.Stat(filename)
 	return !os.IsNotExist(err)
 }
 
-func checkDependencies() error {
+func checkSetting(key string, value string) bool {
+		result, err := conf.GetString(key)
+	if err != nil {
+		return false
+	}
+
+	cleanResult := strings.TrimSpace(result)
+
+	if cleanResult == "" {
+		return false
+	}
+
+	if cleanResult != strings.TrimSpace(value) {
+		return false
+	}
+
+	return true
+}
+
+func checkIsEmpty(key string) bool {
+	result, err := conf.GetString(key)
+	if err != nil {
+		return false
+	}
+
+	cleanResult := strings.TrimSpace(result)
+
+	if cleanResult == "" {
+		return true
+	}
+
+	return false
+}
+
+func checker() error {
 	// 1. Verificar si Podman está instalado
 	if !checkCommand("podman") {
 		return fmt.Errorf("podman no está instalado o no se encuentra en el PATH")
@@ -37,24 +79,39 @@ func checkDependencies() error {
 		return fmt.Errorf("no se encontró el archivo go.mod en el directorio actual")
 	}
 
+	// 4. Verificar si autologin está activado y las credenciales están a disposición
+	if checkSetting("autologin", "yes") {
+		if (checkIsEmpty("user_login") || checkIsEmpty("password_login")) {
+			return fmt.Errorf("autologin está activado y las credenciales están vacias: /conf/.conf")
+		}
+	}
+	
+	// Queda pendiente añadir mas comprobaciones si fuera necesario.
+
 	return nil
 }
 
 func main() {
-	// Configuración de logs en archivo
+	/*
+		Preparamos el archivo de logs.
+	*/
 	logFile, err := os.OpenFile("debug.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err == nil {
 		defer logFile.Close()
 		log.SetOutput(logFile)
 	}
 
-	// Comprobar dependencias antes de arrancar
-	if err := checkDependencies(); err != nil {
+	/*
+		Realizamos comprobaciones previas al arranque.
+	*/
+	if err := checker(); err != nil {
 		log.Printf("Error de dependencias: %v\n", err)
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
 	}
 
-	// Si todo está correcto, inicia la TUI
+	/*
+		Arranque de la interfaz.
+	*/
 	tui.Tui()
 }

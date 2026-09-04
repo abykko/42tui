@@ -4,7 +4,7 @@ import (
 	"charm.land/lipgloss/v2"
 	tea "charm.land/bubbletea/v2"
 
-	"42cli/tui/views"
+	"42tui/tui/views"
 )
 
 func (m Model) View() tea.View {

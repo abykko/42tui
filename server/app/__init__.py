@@ -8,12 +8,12 @@ from app.routes.slots import slots_bp
 from app.routes.freeze import freeze_bp
 from app.middleware.auth import register_security
 
-def create_app(api_security: bool, secret: str):
+def create_app(secret: str):
 
     app = Flask(__name__)
 
     # Middleware / seguridad
-    register_security(app, api_security, secret)
+    register_security(app, secret)
 
     # Blueprints
     app.register_blueprint(status_bp)

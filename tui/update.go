@@ -6,10 +6,10 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"42cli/conf"
-	deployment "42cli/server-deployment"
-	"42cli/tui/service"
-	"42cli/tui/views"
+	"42tui/conf"
+	deployment "42tui/server-deployment"
+	"42tui/tui/service"
+	"42tui/tui/views"
 )
 
 type AutologinMsg struct {

@@ -5,8 +5,8 @@ import (
     "os"
     tea "charm.land/bubbletea/v2"
     
-    "42cli/conf"
-    "42cli/server-deployment"
+    "42tui/conf"
+    "42tui/server-deployment"
 )
 
 func Tui() {

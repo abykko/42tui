@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log"
 
-	"42cli/api"
-	"42cli/conf"
+	"42tui/api"
+	"42tui/conf"
 )
 
 type Milestone struct {

@@ -6,7 +6,7 @@ import (
 	"charm.land/bubbles/v2/textinput"
 	"charm.land/bubbles/v2/viewport"
 
-	"42cli/tui/service"
+	"42tui/tui/service"
 )
 
 type LoginForm struct {

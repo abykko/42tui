@@ -103,7 +103,7 @@ echo "=== Downloading Go modules ==="
 go mod download
 
 echo "=== Building application ==="
-go build -o 42cli .
+go build -o 42tui .
 
 echo "=== Starting application ==="
-./42cli
+./42tui

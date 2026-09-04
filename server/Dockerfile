@@ -1,6 +1,11 @@
 # Use the official lightweight Python image
 FROM python:3.14-slim
 
+ARG PORT
+ENV PORT=${PORT}
+
+RUN echo "Given port: ${PORT}"
+
 # Set the working directory inside the container
 WORKDIR /app
 
@@ -29,10 +34,6 @@ RUN uv run playwright install --with-deps chromium
 # 5. Copy the rest of the application source code
 COPY . .
 
-# Environment Variables
-ENV SERVER_PORT=6742
-ENV API_SECURITY=true
-
 # Prevents Python from writing .pyc files to disk (keeps the container clean)
 ENV PYTHONDONTWRITEBYTECODE=1
 
@@ -40,7 +41,4 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 # 6. Execution Command
-# Using 'sh -c' to allow environment variable expansion ($SERVER_PORT).
-# Note: '--timeout 120' is vital for Playwright operations, as browser 
-# startup and automation tasks may exceed Gunicorn's default 30s timeout.
-CMD ["sh", "-c", "uv run gunicorn wsgi:app --workers 3 --timeout 120 --bind 0.0.0.0:$SERVER_PORT"]
+CMD ["sh", "-c", "uv run gunicorn wsgi:app --workers 3 --timeout 120 --bind 0.0.0.0:$PORT"]

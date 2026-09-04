@@ -8,7 +8,7 @@ import (
 
 	"charm.land/lipgloss/v2"
 
-	"42cli/conf"
+	"42tui/conf"
 )
 
 // Hotbar renders a single-line, 3-column top status bar matching the terminal width.
@@ -36,7 +36,7 @@ func Hotbar(day string, time string) string {
 	// Combine data into a single-line format for each column
 	leftContent := fmt.Sprintf("Intranet (%s)", loggedUser)
 	centerContent := fmt.Sprintf("%s %s", day, time)
-	rightContent := "42cli v1.0.0"
+	rightContent := "42tui v1.0.0"
 
 	content := lipgloss.JoinHorizontal(
 		lipgloss.Top,

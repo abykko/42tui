@@ -1,7 +1,7 @@
 package service
 
 import (
-	"42cli/conf"
+	"42tui/conf"
 )
 
 func Autologin() (string, string, error) {
@@ -11,7 +11,7 @@ func Autologin() (string, string, error) {
 		return "", "", err
 	}
 
-	pass, err := conf.GetString("passwd_login")
+	pass, err := conf.GetString("password_login")
 	if err != nil {
 		return "", "", err
 	}

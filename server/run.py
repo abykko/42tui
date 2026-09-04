@@ -4,8 +4,7 @@ import argparse
 from app import create_app
 
 app = create_app(
-    secret="foo",
-    api_security=False
+    secret="foo"
 )
 
 if __name__ == "__main__":

@@ -21,13 +21,10 @@ def validate_sign(secret, timestamp, sign):
 
     return hmac.compare_digest(sign, legit_sign)
 
-def register_security(app, api_security, secret):
+def register_security(app, secret):
 
     @app.before_request
     def before_request():
-        if not api_security:
-            return
-
         timestamp = request.headers.get("X-Timestamp", "").strip()
         sign = request.headers.get("X-Signature", "").strip()
 
